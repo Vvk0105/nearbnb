@@ -1,0 +1,17 @@
+# HTTPS for the API. Caddy obtains and renews the Let's Encrypt certificate automatically.
+# Requires: DNS A record for API_DOMAIN pointing at this server, and ports 80/443 free.
+{$API_DOMAIN} {
+	encode gzip
+
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	reverse_proxy api:8000
+}

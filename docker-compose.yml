@@ -24,6 +24,7 @@ services:
 
   api:
     build: ./backend
+    image: nearbnb-backend:dev
     env_file: .env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
@@ -38,7 +39,7 @@ services:
       - "8000:8000"
 
   worker:
-    build: ./backend
+    image: nearbnb-backend:dev
     env_file: .env
     command: celery -A app.jobs.celery_app worker --loglevel=info --concurrency=2
     volumes:
@@ -51,7 +52,7 @@ services:
         condition: service_healthy
 
   beat:
-    build: ./backend
+    image: nearbnb-backend:dev
     env_file: .env
     command: celery -A app.jobs.celery_app beat --loglevel=info
     volumes:

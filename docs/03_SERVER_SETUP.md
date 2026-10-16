@@ -1,6 +1,34 @@
-# Server Setup (2 GB RAM host)
+# Server Setup (2 GB RAM, 1 CPU, Ubuntu 22.04)
 
-Measured: 2 GB total, about 1.25 GB available, no swap.
+Measured on the target server: 2 GB RAM (about 1.25 GB available), no swap, 1 CPU core, 49 GB disk (37 GB free).
+Other Docker containers are already running on it, so check ports 80 and 443 before deploying (see "Port check").
+
+## Architecture in production
+
+```
+Browser -> Vercel (React frontend, nearbnb.com)
+        -> https://api.nearbnb.com -> Caddy (HTTPS) -> API container -> Postgres / Redis
+                                                       Celery worker + beat
+```
+
+Use a custom domain on Vercel and a sub-domain for the API on the same registrable domain
+(`nearbnb.com` + `api.nearbnb.com`). Login uses secure cookies, which browsers only accept across
+the same site. With `xxx.vercel.app` talking to your own domain the cookies would be blocked.
+
+Production `.env` values that differ from development:
+
+```
+APP_ENV=production
+APP_SECRET_KEY=<long random string>
+CORS_ORIGINS=https://nearbnb.com
+COOKIE_DOMAIN=.nearbnb.com
+API_DOMAIN=api.nearbnb.com
+SMTP_HOST=mail.nearbnb.com   (plus SMTP_USERNAME / SMTP_PASSWORD)
+TURNSTILE_SECRET_KEY=<from Cloudflare>
+```
+
+Vercel project environment variables: `VITE_API_BASE_URL=https://api.nearbnb.com/api`, `VITE_TURNSTILE_SITE_KEY=...`.
+Vercel's free Hobby plan is for non-commercial use; use Pro (or Cloudflare Pages) for the real business.
 
 ## Memory budget (docker-compose.prod.yml)
 
@@ -11,42 +39,50 @@ Measured: 2 GB total, about 1.25 GB available, no swap.
 | Celery worker (concurrency 1) | 250 MB |
 | Celery beat | 120 MB |
 | Redis | 64 MB |
-| nginx | 40 MB |
-| **Total limits** | **about 1.2 GB** |
+| Caddy | 48 MB |
+| **Total limits** | **about 1.23 GB** |
 
-This fits for early traffic but leaves little headroom. Plan to move to **4 GB** before real launch traffic.
+This is tight, and other containers already on the server use memory too. Plan to move to **4 GB** before real launch traffic.
+
+## Port check (do this first)
+
+```bash
+docker ps
+ss -tlnp | grep -E ':80|:443'
+```
+
+If something else already owns ports 80/443, do not start our Caddy. Either route `api.nearbnb.com` through that
+existing proxy to the `api` container, or tell me and I will adapt the compose file.
 
 ## One-time server preparation
 
-1. **Add 2 GB swap** (safety net against out-of-memory kills):
+1. Add 2 GB swap (safety net against out-of-memory kills):
    ```bash
    fallocate -l 2G /swapfile && chmod 600 /swapfile
    mkswap /swapfile && swapon /swapfile
    echo '/swapfile none swap sw 0 0' >> /etc/fstab
    ```
-2. Install Docker and the compose plugin.
-3. Firewall: allow only 22, 80, 443 (`ufw`). Disable password SSH login, use keys.
-4. TLS: terminate with Let's Encrypt (certbot on host, or put Caddy in front of nginx).
-5. DNS: point the domain at the server. Add SPF, DKIM and DMARC records for email.
-6. Time sync (`chrony` or `systemd-timesyncd`). Booking logic depends on accurate clocks.
+2. Firewall: allow only 22, 80, 443 (`ufw`). SSH keys only, disable password login.
+3. DNS: A record `api.nearbnb.com` -> server IP. Add SPF, DKIM and DMARC for the mail domain.
+4. Time sync (`chrony` or `systemd-timesyncd`). Booking and payout logic depend on accurate clocks.
 
 ## Deploy flow
 
-Do **not** build on the server (a frontend build or image build can exhaust 2 GB).
+Do not build on the server (1 CPU and 2 GB cannot build images reliably).
 
-1. On your machine or CI: `docker build -t nearbnb-backend:latest backend/` and `npm run build` in `frontend/`.
-2. Ship the image (`docker save | ssh server docker load`, or a registry) and `frontend/dist`.
-3. On the server: `docker compose -f docker-compose.prod.yml up -d` then run migrations
-   `docker compose -f docker-compose.prod.yml exec api alembic upgrade head`.
+1. On your machine: `docker build -t nearbnb-backend:latest backend/`
+2. Ship it: `docker save nearbnb-backend:latest | gzip | ssh root@server "gunzip | docker load"`
+3. Copy `docker-compose.prod.yml`, `Caddyfile` and `.env` to the server.
+4. `docker compose -f docker-compose.prod.yml up -d`
+5. First time only:
+   ```bash
+   docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+   docker compose -f docker-compose.prod.yml exec api python -m app.cli seed
+   docker compose -f docker-compose.prod.yml exec api python -m app.cli create-admin --email you@nearbnb.com --name "Your Name"
+   ```
+6. Frontend: connect the repo's `frontend/` folder to Vercel with the environment variables above.
 
 ## Backups
 
-- Nightly `pg_dump` to a file, copied **off the server** (object storage or another host).
-- Back up the `storage` volume (photos, ID documents).
-- Test a restore before launch.
-
-## Still needed from the server owner
-
-- CPU core count (`nproc`), disk (`df -h`), OS version (`cat /etc/os-release`).
-- Whether other sites run on the same server (the hostname suggests it may be shared).
-- Root or sudo access and the domain name.
+Skipped for now (no real data yet). Before the first real user: a nightly `pg_dump` copied off the server,
+plus a copy of the `storage` volume (photos and ID documents), and a tested restore.
