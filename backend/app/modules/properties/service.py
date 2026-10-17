@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.core.locks import lock_unit
 from app.core.images import process_photo
 from app.core.storage import get_storage
 from app.modules.audit import service as audit
@@ -631,6 +632,10 @@ async def create_block(session: AsyncSession, host: HostProfile, unit: Unit, pro
         raise AppError(422, "ROOM_REQUIRED", "This unit has several rooms: choose a room or block all rooms.")
 
     created: list[tuple[RoomOccupancy, Room]] = []
+    await lock_unit(session, unit.id)
+    # An expired hold still sits in the table until the expiry job removes it, and the overlap constraint cannot tell.
+    await session.execute(delete(RoomOccupancy).where(
+        RoomOccupancy.room_id.in_([r.id for r in targets]), RoomOccupancy.kind == "hold", RoomOccupancy.expires_at <= datetime.now(UTC)))
     try:
         async with session.begin_nested():
             for room in targets:

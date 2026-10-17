@@ -5,6 +5,9 @@ import PropertyPage from "./pages/PropertyPage";
 import SearchPage from "./pages/Search";
 import LegalPage from "./pages/Legal";
 import AccountPage from "./pages/account/Account";
+import { TripDetailPage, TripsPage } from "./pages/account/Trips";
+import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
+import { RequestsPage } from "./pages/host/RequestsPage";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
 import { TaxRulesPage } from "./pages/admin/AdminTaxPage";
@@ -29,9 +32,12 @@ export default function App() {
 
         <Route element={<RequireAuth />}>
           <Route path="account" element={<AccountPage />} />
+          <Route path="account/trips" element={<TripsPage />} />
+          <Route path="account/trips/:bookingId" element={<TripDetailPage />} />
           <Route path="host" element={<HostHome />} />
           <Route path="host/apply" element={<ApplyPage />} />
           <Route path="host/payouts" element={<PayoutsPage />} />
+          <Route path="host/requests" element={<RequestsPage />} />
           <Route path="host/properties" element={<PropertiesPage />} />
           <Route path="host/properties/:propertyId" element={<PropertyEditor />} />
           <Route path="host/properties/:propertyId/units/:unitId" element={<UnitEditor />} />
@@ -43,6 +49,7 @@ export default function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="hosts" element={<HostsListPage />} />
             <Route path="hosts/:hostId" element={<HostDetailPage />} />
+            <Route path="bookings" element={<AdminBookingsPage />} />
             <Route path="listings" element={<ListingsPage />} />
             <Route path="listings/:propertyId" element={<ListingDetailPage />} />
             <Route path="catalogues" element={<CataloguesPage />} />

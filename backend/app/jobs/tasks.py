@@ -6,7 +6,8 @@ from sqlalchemy import delete
 from app.core.db import task_session
 from app.jobs.celery_app import celery_app
 from app.modules.auth.models import OtpCode, RefreshToken
-from app.modules.notifications.service import process_outbox
+from app.modules.bookings import service as booking_service
+from app.modules.notifications.service import kick_outbox, process_outbox
 
 
 async def _send_pending() -> int:
@@ -31,3 +32,18 @@ async def _cleanup() -> dict[str, int]:
 @celery_app.task(name="auth.cleanup")
 def cleanup_auth_data() -> dict[str, int]:
     return asyncio.run(_cleanup())
+
+
+async def _expire_bookings() -> dict[str, int]:
+    async with task_session() as session:
+        expired = await booking_service.expire_due(session)
+        reminded = await booking_service.send_reminders(session)
+        await session.commit()
+    if expired or reminded:
+        kick_outbox()
+    return {"expired": expired, "reminded": reminded}
+
+
+@celery_app.task(name="bookings.expire_and_remind")
+def expire_and_remind_bookings() -> dict[str, int]:
+    return asyncio.run(_expire_bookings())

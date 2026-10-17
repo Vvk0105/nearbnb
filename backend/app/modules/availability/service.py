@@ -310,6 +310,19 @@ async def alternatives(session: AsyncSession, unit: Unit, prop: Property, rules:
 
 # ---------- quote ----------
 
+async def unit_price(session: AsyncSession, unit: Unit, prop: Property, overrides: dict[str, Any], hours: int) -> dict:
+    """The full price breakdown (including commission and host payable) for a stay of `hours` at today's settings."""
+    service_fee = await settings_service.get_value(session, "finance.service_fee_percent")
+    commission = (overrides["finance.commission_percent"] if "finance.commission_percent" in overrides
+                  else await settings_service.get_value(session, "finance.commission_percent"))
+    return pricing.compute_price(
+        price_per_24h=unit.price_per_24h, hours=hours, cleaning_fee=unit.cleaning_fee, service_fee_percent=service_fee,
+        tax=await pricing.tax_for(session, prop.country, prop.state), commission_percent=commission,
+        commission_base=await settings_service.get_value(session, "finance.commission_base"),
+        rounding=await settings_service.get_value(session, "finance.rounding"),
+    )
+
+
 async def build_quote(session: AsyncSession, unit: Unit, prop: Property, host: HostProfile, checkin_local_str: str, hours: int, guests: int) -> dict:
     tz = ZoneInfo(prop.timezone)
     checkin_local = parse_local(checkin_local_str)
@@ -341,15 +354,8 @@ async def build_quote(session: AsyncSession, unit: Unit, prop: Property, host: H
         alts = await alternatives(session, unit, prop, rules, start, hours, now)
         return {**base, "available": False, "code": "SLOT_UNAVAILABLE", "message": message, "alternatives": alts}
 
-    service_fee = await settings_service.get_value(session, "finance.service_fee_percent")
-    commission = (overrides["finance.commission_percent"] if "finance.commission_percent" in overrides
-                  else await settings_service.get_value(session, "finance.commission_percent"))
-    breakdown = pricing.compute_price(
-        price_per_24h=unit.price_per_24h, hours=hours, cleaning_fee=unit.cleaning_fee, service_fee_percent=service_fee,
-        tax=await pricing.tax_for(session, prop.country, prop.state), commission_percent=commission,
-        commission_base=await settings_service.get_value(session, "finance.commission_base"),
-        rounding=await settings_service.get_value(session, "finance.rounding"),
-    )
+    breakdown = await unit_price(session, unit, prop, overrides, hours)
     return {**base, "available": True, "checkin_local": checkin_local.strftime("%Y-%m-%dT%H:%M"), "checkout_local": iso_local(end, tz),
             "checkin_label": fmt_local(start, tz), "checkout_label": fmt_local(end, tz), "currency": unit.currency,
-            "rooms_free": len(free), "price": pricing.guest_view(breakdown)}
+            "rooms_free": len(free), "price": pricing.guest_view(breakdown),
+            "response_minutes": overrides.get("booking.host_response_minutes") or await settings_service.get_value(session, "booking.host_response_minutes")}

@@ -15,6 +15,7 @@ celery_app.conf.update(
     broker_connection_retry_on_startup=True,
     beat_schedule={
         "send-pending-emails": {"task": "emails.send_pending", "schedule": 30.0},
+        "expire-and-remind-bookings": {"task": "bookings.expire_and_remind", "schedule": 60.0},
         "cleanup-auth-data": {"task": "auth.cleanup", "schedule": 86400.0},
     },
 )

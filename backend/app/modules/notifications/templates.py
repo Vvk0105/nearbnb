@@ -119,3 +119,8 @@ TEMPLATES.update({
         "<p>Hi {{ name }},</p><p>Please update <strong>{{ title }}</strong> and submit it again.</p>" + _note_html,
     ),
 })
+
+
+from app.modules.notifications.booking_templates import BOOKING_TEMPLATES  # noqa: E402
+
+TEMPLATES.update(BOOKING_TEMPLATES)

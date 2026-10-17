@@ -12,6 +12,7 @@ from app.core.db import get_session
 from app.core.errors import AppError, app_error_handler
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
+from app.modules.bookings.router import router as bookings_router
 from app.modules.hosts.admin_router import router as admin_hosts_router
 from app.modules.hosts.router import router as host_router
 from app.modules.legal.router import router as legal_router
@@ -31,7 +32,7 @@ if settings.is_production and not settings.turnstile_secret_key:
 
 app = FastAPI(
     title="NearBNB API",
-    version="0.4.0",
+    version="0.5.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
@@ -69,4 +70,5 @@ api.include_router(webhooks_router)
 api.include_router(search_router)
 api.include_router(places_router)
 api.include_router(admin_tax_router)
+api.include_router(bookings_router)
 app.include_router(api)

@@ -88,6 +88,28 @@ The Places code is covered by tests using a simulated Google. It has not been ru
 
 For real Stripe testing, set `STRIPE_SECRET_KEY` (test mode) and `STRIPE_WEBHOOK_SECRET` in `.env`, then forward webhooks with `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe`.
 
+### Stripe Accounts v2
+
+Hosts are created as **Accounts v2** (`POST /v2/core/accounts`): the `recipient` configuration with the `stripe_balance.stripe_transfers` capability, the Express dashboard, and the platform responsible for fees and losses (the "separate charges and transfers" model used for payouts in Phase 5). The code is in `backend/app/modules/payments/stripe_gateway.py`.
+
+- **Ready to receive money** means both recipient capabilities (`stripe_transfers` and `payouts`) are `active` and the host owes Stripe nothing that blocks them. The host's "what is still needed" list comes from Stripe's `requirements`.
+- **Onboarding link:** the v2 link is tried first. If Stripe refuses it (older accounts, and Stripe's older test mode, which wants a "sandbox"), the v1 link is used. Stripe documents that v1 endpoints accept v2 accounts.
+- **Older accounts** created before the migration (v1 Express) keep working: they are read through v2, and through v1 if they have no recipient configuration.
+- **Webhooks:** v2 accounts still send the classic `account.updated` event (scope "Connected accounts"), so the existing webhook keeps working unchanged. Stripe's newer "thin" `v2.core.account[...]` events are not used yet; the status is also refreshed whenever the host returns from Stripe.
+- The Stripe Python library is now `stripe==16.0.0`.
+
+## What exists after Phase 4
+
+- **Booking request:** a logged-in guest with a complete profile (name, date of birth, phone and a social profile, as set in Admin > Settings > Guest verification) picks dates on the property page and sends a request. Nothing is charged yet.
+- **Hold:** sending a request reserves one room for the exact period. The overlap rule in the database makes double booking impossible; simultaneous requests for the last room give one winner and a clear "someone is staying..." message to the rest.
+- **Host reply:** the host sees the request in **Host > Booking requests** (dates, what they would receive, guest name, age and social links) and accepts or declines with an optional reason. No reply within the window (default 30 minutes, per-host override) expires the request and frees the dates. Accepting starts the guest's payment window (default 30 minutes) and extends the hold to match.
+- **Guest side:** **My trips** lists requests with a live countdown. A guest can withdraw a waiting or accepted request. Contact details and check-in instructions stay hidden until payment (Phase 5).
+- **Limits:** at most 3 open requests per guest (setting), a host cannot book their own listing, and every stay rule (lead time, hours, length, capacity) is checked again on the server.
+- **Snapshots:** each booking stores the price breakdown, guest details and the rules that applied, so later changes never alter it.
+- **Background jobs (every minute):** expire unanswered requests and unpaid acceptances, send a reminder at the halfway point of each window. Expired holds are also cleared the moment someone else asks for the same dates, so a late job never blocks anyone.
+- **Admin:** read-only **Admin > Bookings** list with status filter.
+- **Not yet:** paying (Phase 5). An accepted request currently waits for payment that cannot be made, and expires after the payment window. To test acceptance comfortably, raise "Guest payment deadline" in Admin > Settings.
+
 ## Production
 
 See [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md). Frontend goes to Vercel (`frontend/vercel.json`, `frontend/.env.example`); the API runs on the server behind Caddy (`Caddyfile`, `docker-compose.prod.yml`).

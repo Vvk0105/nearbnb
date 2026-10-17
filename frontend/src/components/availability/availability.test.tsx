@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { AuthProvider } from "../../lib/auth";
 import { dayLabel, timeLabel, timeOptions } from "../../lib/format";
 import type { PublicUnit } from "../../lib/types";
 import { AvailabilityPanel } from "./AvailabilityPanel";
@@ -53,12 +55,21 @@ describe("formatting helpers", () => {
 
 describe("AvailabilityPanel", () => {
   let calls: { url: string; body?: { checkin_local: string; hours: number; guests: number } }[] = [];
+  let me: unknown = null;                                    // the logged-in user, or null for a visitor
+  let readiness: unknown = { email_verified: true, ready: true, missing: [] };
+  let bookResponse: () => Promise<Response> = () => json(201, { id: "b1" });
 
   beforeEach(() => {
     calls = [];
+    me = null;
+    readiness = { email_verified: true, ready: true, missing: [] };
+    bookResponse = () => json(201, { id: "b1" });
     vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
       const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
       calls.push({ url, body });
+      if (url.endsWith("/me")) return me ? json(200, me) : json(401, { error: { code: "NOT_AUTHENTICATED", message: "Please log in" } });
+      if (url.endsWith("/me/booking-readiness")) return json(200, readiness);
+      if (url.endsWith("/book")) return bookResponse();
       if (url.includes("/availability/calendar")) {
         const days = Array.from({ length: 30 }, (_, i) => ({
           date: `2099-06-${String(i + 1).padStart(2, "0")}`,
@@ -94,8 +105,25 @@ describe("AvailabilityPanel", () => {
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+  function Where({ prefix }: { prefix: string }) {
+    const loc = useLocation();
+    return <p data-testid="where">{prefix} {loc.pathname} {(loc.state as { from?: string } | null)?.from ?? ""}</p>;
+  }
+
   const renderPanel = (initial = {}) =>
-    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AvailabilityPanel unit={unit} timezone="Australia/Sydney" initial={initial} /></QueryClientProvider>);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={["/property/p1"]}>
+            <Routes>
+              <Route path="/property/p1" element={<AvailabilityPanel unit={unit} timezone="Australia/Sydney" initial={initial} />} />
+              <Route path="*" element={<Where prefix="at" />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+  const guestUser = { id: "g1", email: "g@example.com", full_name: "Gina Guest", pending_consents: [], social_links: [], is_admin: false };
 
   it("asks for a date before showing any answer, and never lets you request yet", async () => {
     renderPanel();
@@ -160,5 +188,71 @@ describe("AvailabilityPanel", () => {
     await user.clear(guests);
     await user.type(guests, "9");
     expect(guests.value).toBe("4");                            // clamped to capacity
+  });
+
+  describe("requesting to book", () => {
+    const pickDay = { date: "2099-06-15", time: "14:00", nights: 1, guests: 2 };
+
+    it("sends a visitor to log in and brings the same choices back afterwards", async () => {
+      renderPanel(pickDay);
+      const user = userEvent.setup();
+      const button = screen.getByRole("button", { name: "Request to book" }) as HTMLButtonElement;
+      await waitFor(() => expect(button.disabled).toBe(false));
+      await user.click(button);
+      const where = await screen.findByTestId("where");
+      expect(where.textContent).toContain("/login");
+      expect(where.textContent).toContain("/property/p1?date=2099-06-15&time=14%3A00&nights=1&guests=2");
+      expect(calls.some((c) => c.url.endsWith("/book"))).toBe(false);
+    });
+
+    it("keeps the button off when the dates are not available", async () => {
+      renderPanel({ date: "2099-06-20", time: "14:00" });
+      await screen.findByText("Not available");
+      expect((screen.getByRole("button", { name: "Request to book" }) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("asks a logged-in guest to confirm, then sends the exact choice and opens the trip", async () => {
+      me = guestUser;
+      renderPanel(pickDay);
+      const user = userEvent.setup();
+      const button = screen.getByRole("button", { name: "Request to book" }) as HTMLButtonElement;
+      await waitFor(() => expect(button.disabled).toBe(false));
+      await waitFor(() => expect(calls.some((c) => c.url.endsWith("/me"))).toBe(true));
+      await user.click(button);
+      expect(await screen.findByText(/You are not charged now/)).toBeTruthy();
+      expect(screen.getByText(/Total \$317\.63/)).toBeTruthy();
+      await user.click(await screen.findByRole("button", { name: "Send request" }));
+      expect((await screen.findByTestId("where")).textContent).toContain("/account/trips/b1");
+      expect(calls.find((c) => c.url.endsWith("/book"))!.body).toEqual({ checkin_local: "2099-06-15T14:00", hours: 24, guests: 2 });
+    });
+
+    it("tells a guest with an incomplete profile what is missing and does not send", async () => {
+      me = guestUser;
+      readiness = { email_verified: true, ready: false, missing: [{ field: "dob", label: "your date of birth" }, { field: "social_url", label: "a social media profile link" }] };
+      renderPanel(pickDay);
+      const user = userEvent.setup();
+      const button = screen.getByRole("button", { name: "Request to book" }) as HTMLButtonElement;
+      await waitFor(() => expect(button.disabled).toBe(false));
+      await waitFor(() => expect(calls.some((c) => c.url.endsWith("/me"))).toBe(true));
+      await user.click(button);
+      expect(await screen.findByText(/your date of birth, a social media profile link/)).toBeTruthy();
+      expect((screen.getByRole("button", { name: "Send request" }) as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByRole("link", { name: "Update my profile" })).toBeTruthy();
+    });
+
+    it("shows the server's reason when the dates were just taken and returns to the form", async () => {
+      me = guestUser;
+      bookResponse = () => json(409, { error: { code: "SLOT_UNAVAILABLE", message: "Someone is staying from 15 Jun 2:00 PM until 16 Jun 2:00 PM." } });
+      renderPanel(pickDay);
+      const user = userEvent.setup();
+      const button = screen.getByRole("button", { name: "Request to book" }) as HTMLButtonElement;
+      await waitFor(() => expect(button.disabled).toBe(false));
+      await waitFor(() => expect(calls.some((c) => c.url.endsWith("/me"))).toBe(true));
+      await user.click(button);
+      await user.click(await screen.findByRole("button", { name: "Send request" }));
+      expect(await screen.findByRole("alert")).toBeTruthy();
+      expect(screen.getAllByText(/Someone is staying from 15 Jun/).length).toBeGreaterThan(0);
+      expect(screen.getByRole("button", { name: "Request to book" })).toBeTruthy();
+    });
   });
 });

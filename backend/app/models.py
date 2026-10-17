@@ -1,6 +1,7 @@
 """Imports every model so Alembic autogenerate and Base.metadata see all tables."""
 from app.modules.audit.models import AuditLog  # noqa: F401
 from app.modules.auth.models import OtpCode, RefreshToken  # noqa: F401
+from app.modules.bookings.models import Booking  # noqa: F401
 from app.modules.hosts.models import HostDocument, HostProfile, HostSettingOverride  # noqa: F401
 from app.modules.legal.models import LegalDocument  # noqa: F401
 from app.modules.payments.models import StripeEvent  # noqa: F401

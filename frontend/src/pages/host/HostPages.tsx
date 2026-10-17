@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { label } from "../../lib/format";
-import type { HostInfo } from "../../lib/types";
+import type { BookingList, HostInfo } from "../../lib/types";
 import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
 
 export function useHost() {
@@ -22,6 +22,17 @@ function Steps({ host }: { host: HostInfo }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+function RequestsShortcut() {
+  const { data } = useQuery({ queryKey: ["bookings", "host", "counts"], queryFn: () => api<BookingList>("/host/bookings?group=pending"), refetchInterval: 30_000 });
+  const waiting = data?.counts.pending ?? 0;
+  return (
+    <Card title="Booking requests">
+      <p className="text-sm text-gray-700">{waiting > 0 ? `${waiting} request${waiting > 1 ? "s" : ""} waiting for your reply.` : "No requests waiting right now."}</p>
+      <div className="mt-4"><Link to="/host/requests"><Button variant={waiting > 0 ? "primary" : "secondary"}>Open requests</Button></Link></div>
+    </Card>
   );
 }
 
@@ -84,6 +95,7 @@ export function HostHome() {
         <p className="text-sm text-gray-700">{action?.text}</p>
         {action && <div className="mt-4"><Link to={action.to}><Button>{action.cta}</Button></Link></div>}
       </Card>
+      {host.state === "active" && <RequestsShortcut />}
       {host.can_create_listings && (
         <Card title="Your listings">
           <p className="text-sm text-gray-600">{host.can_submit_listings ? "Create properties and submit them for approval." : "You can start drafting properties now. Submitting for approval unlocks once payout setup is complete."}</p>

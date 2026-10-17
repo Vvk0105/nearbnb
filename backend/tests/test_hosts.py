@@ -330,7 +330,7 @@ def test_stripe_errors_become_readable_messages_not_a_crash():
             raise stripe.InvalidRequestError("Connected accounts in IN cannot be created by platforms in AU.", param=None)
 
     class Client:
-        accounts = Boom()
+        v2 = type("V2", (), {"core": type("Core", (), {"accounts": Boom()})()})()
 
     gateway = RealStripeGateway.__new__(RealStripeGateway)
     gateway._client = Client()

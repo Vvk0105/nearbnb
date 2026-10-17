@@ -333,7 +333,8 @@ async def onboarding_link(session: AsyncSession, host: HostProfile, user: User) 
     await _check_country(session, country)  # e.g. a host approved before the country list was tightened
     if host.stripe_account_id is None:
         host.stripe_account_id = await asyncio.to_thread(
-            gateway.create_account, email=user.email, country=country, host_id=str(host.id)
+            gateway.create_account, email=user.email, country=country, host_id=str(host.id),
+            display_name=(host.application_data or {}).get("legal_name", ""),
         )
         await session.flush()
     base = get_settings().app_base_url.rstrip("/")

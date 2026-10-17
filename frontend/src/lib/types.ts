@@ -120,9 +120,34 @@ export type Alternative = { checkin_local: string; checkout_local: string; label
 export type Quote = {
   available: boolean; code?: string; message?: string; alternatives: Alternative[]; timezone: string; hours: number; guests: number;
   checkin_local?: string; checkout_local?: string; checkin_label?: string; checkout_label?: string; currency?: string;
-  rooms_free?: number; price?: PriceBreakdown;
+  rooms_free?: number; price?: PriceBreakdown; response_minutes?: number;
 };
 export type Place = {
   label: string; latitude: number; longitude: number;
   address: { address_line1: string; suburb: string; state: string; postcode: string; country: string };
 };
+
+// ---- booking requests (Phase 4) ----
+export type BookingStatus =
+  | "requested" | "accepted" | "payment_pending" | "confirmed" | "checked_in" | "completed"
+  | "rejected" | "expired" | "withdrawn" | "payment_expired" | "cancelled";
+export type BookingGroup = "pending" | "awaiting_payment" | "upcoming" | "past";
+export type BookingItem = {
+  id: string; reference: string; status: BookingStatus; hours: number; guests: number; currency: string; timezone: string;
+  check_in_local: string; check_out_local: string; check_in_label: string; check_out_label: string;
+  requested_at: string | null; expires_at: string | null; payment_deadline_at: string | null;
+  seconds_to_respond: number | null; seconds_to_pay: number | null; closed_reason: string | null; can_withdraw: boolean;
+  property: { id: string; name: string; suburb: string; state: string; cover_url: string | null };
+  unit: { id: string; name: string }; room: string | null;
+  // guest view
+  price: Partial<PriceBreakdown> & { total?: number; commission?: number; commission_percent?: number; host_payable?: number };
+  host?: { first_name?: string; name?: string; email?: string; phone?: string | null };
+  checkin_instructions?: string;
+  // host / admin view
+  guest?: {
+    full_name: string; age: number | null; member_since: string | null; email_verified: boolean;
+    social_links: { platform: string; url: string }[]; email?: string; phone?: string; dob?: string;
+  };
+};
+export type BookingList = { items: BookingItem[]; total: number; page: number; page_size: number; counts: Record<BookingGroup, number> };
+export type Readiness = { email_verified: boolean; ready: boolean; missing: { field: string; label: string }[] };

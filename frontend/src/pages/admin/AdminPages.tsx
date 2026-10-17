@@ -13,6 +13,7 @@ export function AdminLayout() {
       <div className="flex flex-wrap gap-2">
         <NavLink to="/admin/hosts" className={tab}>Hosts</NavLink>
         <NavLink to="/admin/listings" className={tab}>Listings</NavLink>
+        <NavLink to="/admin/bookings" className={tab}>Bookings</NavLink>
         <NavLink to="/admin/settings" className={tab}>Settings</NavLink>
         <NavLink to="/admin/catalogues" className={tab}>Types &amp; amenities</NavLink>
         <NavLink to="/admin/tax" className={tab}>Tax</NavLink>

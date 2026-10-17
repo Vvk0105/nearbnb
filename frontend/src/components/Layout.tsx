@@ -28,6 +28,11 @@ export function Layout() {
               </NavLink>
             )}
             {user && !user.is_admin && (
+              <NavLink to="/account/trips" className={link}>
+                My trips
+              </NavLink>
+            )}
+            {user && !user.is_admin && (
               <NavLink to="/host" className={link}>
                 Host
               </NavLink>
@@ -132,7 +137,7 @@ export function RequireAuth() {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <p className="text-gray-500">Loading...</p>;
-  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   return <Outlet />;
 }
 

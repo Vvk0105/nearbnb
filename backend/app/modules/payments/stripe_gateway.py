@@ -1,11 +1,13 @@
 """Stripe Connect access behind an interface.
 
-* RealStripeGateway talks to Stripe (Express connected accounts, hosted onboarding).
+* RealStripeGateway talks to Stripe using the Accounts v2 API: a host is a v2 Account with the `recipient`
+  configuration (receives transfers from the platform), the Express dashboard, and the platform responsible for
+  fees and losses. That is the "separate charges and transfers" model.
 * FakeStripeGateway is used automatically in development when STRIPE_SECRET_KEY is empty, so the whole host
   flow can be exercised without a Stripe account. It is refused in production.
 
-NOTE: RealStripeGateway has not been exercised against Stripe yet (no keys at the time of writing). Test it
-with Stripe test-mode keys before relying on it.
+Accounts created before the v2 migration (v1 Express accounts) keep working: Stripe lets v2 endpoints read them,
+and v1 endpoints read v2 accounts. Where one API cannot serve an account we fall back to the other (see below).
 """
 import logging
 import uuid
@@ -33,7 +35,7 @@ class AccountStatus:
 class StripeGateway(Protocol):
     is_fake: bool
 
-    def create_account(self, *, email: str, country: str, host_id: str) -> str: ...
+    def create_account(self, *, email: str, country: str, host_id: str, display_name: str = "") -> str: ...
     def create_onboarding_link(self, account_id: str, refresh_url: str, return_url: str) -> str: ...
     def retrieve_account(self, account_id: str) -> AccountStatus: ...
 
@@ -58,17 +60,20 @@ class RealStripeGateway:
 
         self._client = stripe.StripeClient(api_key)
 
-    def create_account(self, *, email: str, country: str, host_id: str) -> str:
+    def create_account(self, *, email: str, country: str, host_id: str, display_name: str = "") -> str:
         import stripe
 
         try:
-            account = self._client.accounts.create(
+            account = self._client.v2.core.accounts.create(
                 params={
-                    "type": "express",
-                    "country": country,
-                    "email": email,
+                    "contact_email": email,
+                    "display_name": display_name or email,
+                    "dashboard": "express",
+                    "identity": {"country": country.lower()},
                     # Separate charges and transfers: we collect from the guest and later transfer the host's share.
-                    "capabilities": {"transfers": {"requested": True}},
+                    "configuration": {"recipient": {"capabilities": {"stripe_balance": {"stripe_transfers": {"requested": True}}}}},
+                    # With the Express dashboard the platform carries fees and losses (same as the old v1 Express accounts).
+                    "defaults": {"responsibilities": {"fees_collector": "application", "losses_collector": "application"}},
                     "metadata": {"host_id": host_id},
                 }
             )
@@ -80,20 +85,69 @@ class RealStripeGateway:
         import stripe
 
         try:
-            link = self._client.account_links.create(
+            link = self._client.v2.core.account_links.create(
+                params={
+                    "account": account_id,
+                    "use_case": {"type": "account_onboarding", "account_onboarding": {"refresh_url": refresh_url, "return_url": return_url}},
+                }
+            )
+            return link.url
+        except stripe.InvalidRequestError as exc:
+            # Stripe refuses a v2 link for some accounts (accounts created before the v2 migration, and Stripe's older
+            # test mode, which asks for a "sandbox"). The v1 link endpoint accepts every account, so use it instead.
+            log.warning("v2 account link refused (%s); using the v1 account link", exc)
+        except stripe.StripeError as exc:
+            raise _readable(exc) from exc
+        try:
+            v1 = self._client.v1.account_links.create(
                 params={"account": account_id, "refresh_url": refresh_url, "return_url": return_url, "type": "account_onboarding"}
             )
         except stripe.StripeError as exc:
             raise _readable(exc) from exc
-        return link.url
+        return v1.url
 
     def retrieve_account(self, account_id: str) -> AccountStatus:
         import stripe
 
         try:
-            return status_from_stripe_account(self._client.accounts.retrieve(account_id))
+            v2 = self._client.v2.core.accounts.retrieve(account_id, params={"include": ["configuration.recipient", "requirements"]})
+            status = status_from_v2_account(v2)
+            if status is not None:
+                return status
+            # An account without the recipient configuration (an older v1 account): read it the v1 way.
+            return status_from_stripe_account(self._client.v1.accounts.retrieve(account_id))
         except stripe.StripeError as exc:
             raise _readable(exc) from exc
+
+
+def _plain(obj):
+    """Stripe objects and plain dicts (webhook payloads) are read the same way."""
+    return obj.to_dict() if hasattr(obj, "to_dict") else obj
+
+
+def status_from_v2_account(account) -> AccountStatus | None:
+    """Reads a v2 Account (retrieved with include=configuration.recipient,requirements).
+
+    Returns None when the account has no recipient configuration, so the caller can read it another way.
+    * transfers_active / payouts_enabled: the two recipient capabilities are `active`
+    * requirements: what the host still has to provide (entries Stripe is waiting on the host for)
+    * details_submitted: nothing the host owes is holding back a capability"""
+    data = _plain(account) or {}
+    recipient = (data.get("configuration") or {}).get("recipient")
+    if not recipient:
+        return None
+    balance = (recipient.get("capabilities") or {}).get("stripe_balance") or {}
+    entries = (data.get("requirements") or {}).get("entries") or []
+    from_host = [e for e in entries if e.get("awaiting_action_from") == "user"]
+    # Only items that hold back a capability count. (A new account lists everything as "eventually due" for a moment and
+    # "past due" a moment later, so the deadline status is not a reliable signal.)
+    blocking = [e for e in from_host if (e.get("impact") or {}).get("restricts_capabilities")]
+    return AccountStatus(
+        details_submitted=not blocking,
+        payouts_enabled=(balance.get("payouts") or {}).get("status") == "active",
+        transfers_active=(balance.get("stripe_transfers") or {}).get("status") == "active",
+        requirements=[e.get("description", "") for e in from_host],
+    )
 
 
 def status_from_stripe_account(account) -> AccountStatus:
@@ -120,7 +174,7 @@ class FakeStripeGateway:
 
     is_fake = True
 
-    def create_account(self, *, email: str, country: str, host_id: str) -> str:
+    def create_account(self, *, email: str, country: str, host_id: str, display_name: str = "") -> str:
         return f"acct_fake_{uuid.uuid4().hex[:12]}"
 
     def create_onboarding_link(self, account_id: str, refresh_url: str, return_url: str) -> str:

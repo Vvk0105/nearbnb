@@ -3,9 +3,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { dayLabel, money, timeLabel, timeOptions, todayIso } from "../../lib/format";
 import type { CalendarMonth, PublicUnit, Quote, Timeline } from "../../lib/types";
-import { Alert, Button } from "../ui";
+import { Alert } from "../ui";
 import { DayTimeline } from "./DayTimeline";
 import { MonthCalendar } from "./MonthCalendar";
+import { RequestToBook } from "./RequestToBook";
 
 export type PanelInitial = { date?: string; time?: string; nights?: number; guests?: number };
 
@@ -132,10 +133,7 @@ export function AvailabilityPanel({ unit, timezone, initial = {} }: { unit: Publ
           )}
         </div>
 
-        <div>
-          <Button disabled className="w-full">Request to book</Button>
-          <p className="mt-2 text-center text-xs text-gray-500">Booking requests open in the next update. Times are local to the property ({timezone.replace("_", " ")}).</p>
-        </div>
+        <RequestToBook unit={unit} quote={date && !quote.isPlaceholderData ? q : undefined} timezone={timezone} selection={{ date, time: effectiveTime, nights, guests }} />
       </div>
     </div>
   );
