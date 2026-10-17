@@ -121,6 +121,19 @@ TEMPLATES.update({
 })
 
 
+TEMPLATES.update({
+    "account_suspended": (
+        "Your NearBNB account was suspended",
+        "Hi {{ name }},\n\nYour account has been suspended by the NearBNB team.\nReason: {{ note }}\n\nIf you think this is a mistake, reply to this email.\n",
+        "<p>Hi {{ name }},</p><p>Your account has been suspended by the NearBNB team.</p><p><strong>Reason:</strong> {{ note }}</p><p>If you think this is a mistake, reply to this email.</p>",
+    ),
+    "account_reactivated": (
+        "Your NearBNB account was reactivated",
+        "Hi {{ name }},\n\nYour account has been reactivated. You can log in again.\n",
+        "<p>Hi {{ name }},</p><p>Your account has been reactivated. You can log in again.</p>",
+    ),
+})
+
 from app.modules.notifications.booking_templates import BOOKING_TEMPLATES  # noqa: E402
 
 TEMPLATES.update(BOOKING_TEMPLATES)

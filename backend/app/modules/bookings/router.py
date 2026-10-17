@@ -58,9 +58,9 @@ async def create_request(unit_id: str, body: BookIn, request: Request, user: Use
 
 
 @router.get("/me/bookings")
-async def my_bookings(group: str | None = None, page: int = Query(1, ge=1, le=500), user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+async def my_bookings(group: str | None = None, status: str | None = Query(None, max_length=20), page: int = Query(1, ge=1, le=500), user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     await _tidy(session)
-    return await service.list_for(session, guest_id=user.id, group=group, viewer="guest", page=page)
+    return await service.list_for(session, guest_id=user.id, group=group, status=status, viewer="guest", page=page)
 
 
 @router.get("/me/bookings/{booking_id}")
@@ -113,10 +113,10 @@ async def my_invoice(booking_id: str, user: User = Depends(get_current_user), se
 # ---------- host ----------
 
 @router.get("/host/bookings")
-async def host_bookings(group: str | None = None, page: int = Query(1, ge=1, le=500), user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+async def host_bookings(group: str | None = None, status: str | None = Query(None, max_length=20), page: int = Query(1, ge=1, le=500), user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     host = await _host(session, user)
     await _tidy(session)
-    return await service.list_for(session, host_id=host.id, group=group, viewer="host", page=page)
+    return await service.list_for(session, host_id=host.id, group=group, status=status, viewer="host", page=page)
 
 
 @router.get("/host/bookings/{booking_id}")
@@ -147,7 +147,7 @@ async def reject(booking_id: str, body: RejectIn, request: Request, user: User =
 # ---------- admin (read only for now) ----------
 
 @router.get("/admin/bookings")
-async def admin_bookings(group: str | None = None, status: str | None = None, page: int = Query(1, ge=1, le=500),
+async def admin_bookings(group: str | None = None, status: str | None = None, q: str | None = Query(None, max_length=100), page: int = Query(1, ge=1, le=500),
                          _: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
     await _tidy(session)
-    return await service.list_for(session, group=group, status=status, viewer="admin", page=page)
+    return await service.list_for(session, group=group, status=status, viewer="admin", page=page, search=q)

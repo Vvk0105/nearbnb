@@ -501,7 +501,7 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
 
 
 async def list_for(session: AsyncSession, *, guest_id: uuid.UUID | None = None, host_id: uuid.UUID | None = None, group: str | None = None,
-                   status: str | None = None, viewer: str, page: int = 1, page_size: int = 25) -> dict:
+                   status: str | None = None, viewer: str, page: int = 1, page_size: int = 25, search: str | None = None) -> dict:
     if group is not None and group not in GROUPS:
         raise AppError(422, "INVALID_GROUP", "Unknown filter.")
     scope = []
@@ -514,6 +514,12 @@ async def list_for(session: AsyncSession, *, guest_id: uuid.UUID | None = None, 
         query = query.where(Booking.status.in_(GROUPS[group]))
     if status:
         query = query.where(Booking.status == status)
+    if search and search.strip():
+        like = f"%{search.strip()}%"
+        guests = select(User.id).where(or_(User.email.ilike(like), User.full_name.ilike(like)))
+        host_users = select(HostProfile.id).join(User, User.id == HostProfile.user_id).where(or_(User.email.ilike(like), User.full_name.ilike(like)))
+        props = select(Property.id).where(Property.name.ilike(like))
+        query = query.where(or_(Booking.reference.ilike(like), Booking.guest_id.in_(guests), Booking.host_id.in_(host_users), Booking.property_id.in_(props)))
     total = (await session.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
     # soonest deadline first for open requests, newest first otherwise
     order = (Booking.expires_at.asc(),) if group == "pending" else (Booking.requested_at.desc(),)

@@ -142,6 +142,28 @@ Hosts are created as **Accounts v2** (`POST /v2/core/accounts`): the `recipient`
 
 Webhook events to add in Stripe (see "Payments setup"): your account: `refund.created`, `refund.updated`, `refund.failed`; connected accounts: `payout.created`, `payout.updated`, `payout.paid`, `payout.failed`, `payout.canceled`. Without them, refunds still complete through the reconcile job, and the bank-payout history simply stays empty.
 
+## What exists after Phase 7
+
+No new database tables: this phase is screens and queries on top of Phases 4 to 6.
+
+**Host**
+- **Dashboard** (Host, once active): requests waiting, guests waiting to pay, who is staying now, who is coming up, this month's stays, next payout, and listing statuses; it warns when Stripe needs more information.
+- **Earnings and payouts** (`/host/money`): one row per booking with the booking value (accommodation plus cleaning), commission, your share, refunds taken from you, what you receive, and the payout state and date; summary cards (paid out, on its way, this month, next payout); Stripe's bank payouts; month filter; **CSV download**. A host never sees what the guest paid in total, the service fee or tax.
+
+**Guest**
+- **My trips** now has a Cancelled tab (next to waiting, awaiting payment, upcoming and past).
+
+**Admin** (the tab bar along the top)
+- **Dashboard:** counts that link to the right screen: host applications and listings to review, listing edits, refund requests, failed refunds, failed payments, failed payouts, payouts on hold, failed Stripe webhooks, hosts at the cancellation alert level, suspended users; bookings in each stage; money in the last 30 days (paid, refunded, net, service fees, commission); recent activity.
+- **Users:** search by name, email or phone, filter by status and role, open a user to see their profile, bookings and history, and **suspend** (reason required; signs them out everywhere, blocks login, emails them) or **reactivate**. Admins cannot be suspended and you cannot suspend yourself.
+- **Bookings:** search by reference, guest, host or property, filter by status, and open one booking for the full story: stay, money, timeline of every status change and who did it, payments, refunds, refund requests, payout, invoice, and the audit entries.
+- **Payments:** every payment with Stripe references and failure reasons, searchable.
+- **Payouts:** every host payout by state (scheduled, held, paid, failed, reversed) with Hold, Release and Retry.
+- **Webhooks:** Stripe events that failed, with the error and a **Run again** button (safe: handlers are idempotent).
+- **Exports:** CSV of bookings, payments, refunds and payouts with an optional date range. Every download is written to the audit log, and text that a spreadsheet could run as a formula (a name starting with `=`, `+`, `-` or `@`) is neutralised.
+
+With this phase an admin can run the whole flow (applications, listings, bookings, cancellations, refunds, payouts, failures) from the screens, without database access. Reviews, issue reports and calendar sync come in later phases and will add their own queues.
+
 ## Production
 
 See [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md). Frontend goes to Vercel (`frontend/vercel.json`, `frontend/.env.example`); the API runs on the server behind Caddy (`Caddyfile`, `docker-compose.prod.yml`).

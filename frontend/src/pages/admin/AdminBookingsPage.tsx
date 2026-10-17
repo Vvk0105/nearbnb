@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { money } from "../../lib/format";
 import type { BookingItem, BookingList } from "../../lib/types";
 import { BookingBadge } from "../../components/bookings";
-import { Alert, Button, Card, Select, TextArea, errorMessage } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { Alert, Button, Card, Field, Select, TextArea, errorMessage } from "../../components/ui";
 
 const STATUSES = ["", "requested", "accepted", "confirmed", "checked_in", "completed", "cancelled", "rejected", "expired", "withdrawn", "payment_expired"];
 
@@ -76,16 +78,20 @@ function Actions({ b, onDone }: { b: AdminBooking; onDone: () => Promise<unknown
 export function AdminBookingsPage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const params = new URLSearchParams({ page: String(page), ...(status ? { status } : {}), ...(q.trim() ? { q: q.trim() } : {}) });
   const { data, error, isLoading } = useQuery({
-    queryKey: ["bookings", "admin", status],
-    queryFn: () => api<BookingList>(`/admin/bookings${status ? `?status=${status}` : ""}`),
+    queryKey: ["bookings", "admin", status, q, page],
+    queryFn: () => api<BookingList>(`/admin/bookings?${params}`),
     refetchInterval: 30_000,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["bookings"] });
   return (
     <Card title="Bookings">
-      <div className="mb-4 max-w-xs">
-        <Select id="bstatus" label="Show" value={status} onChange={(e) => setStatus(e.target.value)}>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <Field id="bq" label="Search" placeholder="Reference, guest, host or property" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
+        <Select id="bstatus" label="Show" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
           {STATUSES.map((s) => <option key={s} value={s}>{s ? s.replace(/_/g, " ") : "All"}</option>)}
         </Select>
       </div>
@@ -99,7 +105,7 @@ export function AdminBookingsPage() {
           <tbody>
             {(data?.items as AdminBooking[] | undefined)?.map((b) => (
               <tr key={b.id} className="border-t border-gray-100 align-top">
-                <td className="py-2 pr-3 font-mono text-xs">{b.reference}</td>
+                <td className="py-2 pr-3 font-mono text-xs"><Link className="text-brand-700 underline" to={`/admin/bookings/${b.id}`}>{b.reference}</Link></td>
                 <td className="pr-3">{b.property.name}<br /><span className="text-xs text-gray-500">{b.unit.name}{b.room ? ` · room ${b.room}` : ""}</span></td>
                 <td className="pr-3">{b.guest?.full_name}<br /><span className="text-xs text-gray-500">{b.guest?.email}</span></td>
                 <td className="pr-3">{b.host?.name}<br /><span className="text-xs text-gray-500">{b.host?.email}</span></td>
@@ -114,6 +120,7 @@ export function AdminBookingsPage() {
         </table>
       </div>
       {data && data.items.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No bookings.</p>}
+      {data && <Pager page={page} pageSize={data.page_size} total={data.total} onChange={setPage} />}
     </Card>
   );
 }

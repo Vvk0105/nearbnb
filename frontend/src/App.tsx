@@ -9,7 +9,12 @@ import { TripDetailPage, TripsPage } from "./pages/account/Trips";
 import { PayPage } from "./pages/account/Pay";
 import { InvoicePage } from "./pages/account/Invoice";
 import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
+import { AdminBookingDetailPage } from "./pages/admin/AdminBookingDetailPage";
 import { AdminCancellationPage } from "./pages/admin/AdminCancellationPage";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminExportsPage, AdminPaymentsPage, AdminPayoutsPage, AdminWebhooksPage } from "./pages/admin/AdminMoneyPages";
+import { AdminUserDetailPage, AdminUsersPage } from "./pages/admin/AdminUsersPages";
+import { MoneyPage } from "./pages/host/MoneyPage";
 import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
@@ -43,6 +48,7 @@ export default function App() {
           <Route path="host" element={<HostHome />} />
           <Route path="host/apply" element={<ApplyPage />} />
           <Route path="host/payouts" element={<PayoutsPage />} />
+          <Route path="host/money" element={<MoneyPage />} />
           <Route path="host/requests" element={<RequestsPage />} />
           <Route path="host/properties" element={<PropertiesPage />} />
           <Route path="host/properties/:propertyId" element={<PropertyEditor />} />
@@ -51,11 +57,18 @@ export default function App() {
 
         <Route element={<RequireAdmin />}>
           <Route path="admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="settings" replace />} />
+            <Route index element={<AdminDashboardPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="hosts" element={<HostsListPage />} />
             <Route path="hosts/:hostId" element={<HostDetailPage />} />
             <Route path="bookings" element={<AdminBookingsPage />} />
+            <Route path="bookings/:bookingId" element={<AdminBookingDetailPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="users/:userId" element={<AdminUserDetailPage />} />
+            <Route path="payments" element={<AdminPaymentsPage />} />
+            <Route path="payouts" element={<AdminPayoutsPage />} />
+            <Route path="webhooks" element={<AdminWebhooksPage />} />
+            <Route path="exports" element={<AdminExportsPage />} />
             <Route path="refunds" element={<AdminRefundsPage />} />
             <Route path="cancellation" element={<AdminCancellationPage />} />
             <Route path="listings" element={<ListingsPage />} />

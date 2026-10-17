@@ -10,8 +10,8 @@ import { BookingBadge, Countdown } from "../../components/bookings";
 import { CancelBooking } from "../../components/CancelBooking";
 import { Alert, Button, Card, errorMessage } from "../../components/ui";
 
-const TABS: ["all" | BookingGroup, string][] = [
-  ["all", "All"], ["pending", "Waiting for host"], ["awaiting_payment", "Awaiting payment"], ["upcoming", "Upcoming"], ["past", "Past"],
+const TABS: ["all" | BookingGroup | "cancelled", string][] = [
+  ["all", "All"], ["pending", "Waiting for host"], ["awaiting_payment", "Awaiting payment"], ["upcoming", "Upcoming"], ["past", "Past"], ["cancelled", "Cancelled"],
 ];
 
 function TripCard({ b }: { b: BookingItem }) {
@@ -42,10 +42,10 @@ function TripCard({ b }: { b: BookingItem }) {
 }
 
 export function TripsPage() {
-  const [group, setGroup] = useState<"all" | BookingGroup>("all");
+  const [group, setGroup] = useState<"all" | BookingGroup | "cancelled">("all");
   const { data, error, isLoading } = useQuery({
     queryKey: ["bookings", "guest", group],
-    queryFn: () => api<BookingList>(`/me/bookings${group === "all" ? "" : `?group=${group}`}`),
+    queryFn: () => api<BookingList>(`/me/bookings${group === "all" ? "" : group === "cancelled" ? "?status=cancelled" : `?group=${group}`}`),
     refetchInterval: 30_000,
   });
   return (
@@ -55,7 +55,7 @@ export function TripsPage() {
         {TABS.map(([key, text]) => (
           <button key={key} role="tab" aria-selected={group === key} onClick={() => setGroup(key)}
             className={`rounded-full border px-3 py-1 text-sm ${group === key ? "border-brand-600 bg-brand-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"}`}>
-            {text}{key !== "all" && data?.counts[key] ? ` (${data.counts[key]})` : ""}
+            {text}{key !== "all" && key !== "cancelled" && data?.counts[key] ? ` (${data.counts[key]})` : ""}
           </button>
         ))}
       </div>

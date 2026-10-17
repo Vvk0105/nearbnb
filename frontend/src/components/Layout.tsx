@@ -23,7 +23,7 @@ export function Layout() {
               Explore
             </NavLink>
             {user?.is_admin && (
-              <NavLink to="/admin/hosts" className={link}>
+              <NavLink to="/admin" className={link}>
                 Admin
               </NavLink>
             )}

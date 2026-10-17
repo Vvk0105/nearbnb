@@ -194,3 +194,47 @@ export type HostCancellations = {
   total: number; last_30_days: number; last_90_days: number; threshold: number; window_days: number; in_window: number; alert: boolean;
   items: { reference: string; at: string | null; reason: string | null }[];
 };
+
+// ---- dashboards, money pages and admin screens (Phase 7) ----
+export type Paged<T> = { total: number; page: number; page_size: number; items: T[] };
+export type HostMoneyRow = {
+  booking_id: string; reference: string; property: string; status: string; currency: string; check_in: string; check_in_label: string; nights: number;
+  gross: number; commission: number; host_share: number; deductions: number; net: number; reversed: number;
+  payout_state: string; eligible_at: string | null; transferred_at: string | null;
+};
+export type MoneySummary = { paid_out: number; scheduled: number; this_month: number; deductions: number; next_payout: { at: string; amount: number; reference: string } | null };
+export type BankPayoutRow = { id: string; amount: number; currency: string; status: string; arrival_date: string | null; failure_code: string | null };
+export type HostMoney = Paged<HostMoneyRow> & { summary: MoneySummary; bank_payouts: BankPayoutRow[] };
+export type HostDashboardData = {
+  state: string; requests: { pending: number; awaiting_payment: number }; current_stays: BookingItem[]; upcoming_stays: BookingItem[];
+  listings: Record<string, number>; money: MoneySummary; needs_attention: string[];
+};
+export type AdminAlert = { key: string; label: string; count: number; href: string; severity: "none" | "info" | "action" | "problem" };
+export type AdminDashboardData = {
+  alerts: AdminAlert[];
+  bookings: { requests_waiting: number; awaiting_payment: number; upcoming: number; in_progress: number; completed_30_days: number; cancelled_30_days: number };
+  money_30_days: { gross_paid: number; refunded: number; net_collected: number; service_fees: number; commission: number };
+  totals: { users: number; hosts: number; properties: number };
+  recent: { id: number; action: string; entity_type: string; entity_id: string | null; actor: string | null; at: string; reason: string | null }[];
+};
+export type AdminPaymentRow = {
+  id: string; booking_id: string; reference: string; guest: string; amount: number; currency: string; status: string; attempt: number;
+  failure_code: string | null; failure_message: string | null; intent_id: string; charge_id: string | null; created_at: string; succeeded_at: string | null;
+};
+export type AdminPayoutRow = PayoutView & { booking_id: string; reference: string; host: string; host_email: string; currency: string; check_in: string; stripe_transfer_id: string | null };
+export type WebhookRow = { id: string; event_id: string; type: string; created_at: string; processed_at: string | null; error: string | null };
+export type AdminUserRow = {
+  id: string; email: string; full_name: string; status: string; is_admin: boolean; is_host: boolean; host_state: string | null; bookings: number; created_at: string | null; last_login_at: string | null;
+};
+export type AdminUserDetail = AdminUserRow & {
+  phone: string | null; dob: string | null; email_verified: boolean; social_links: { platform: string; url: string }[]; host_id: string | null;
+  recent_bookings: BookingItem[]; history: { at: string; action: string; entity_type: string; actor: string | null; reason: string | null }[];
+};
+export type AdminBookingDetail = BookingItem & {
+  timeline: { at: string; from: string | null; to: string; actor: string | null; note: string | null }[];
+  payments: { id: string; status: string; amount: number; attempt: number; intent_id: string; charge_id: string | null; failure_message: string | null; created_at: string }[];
+  refunds: { id: string; type: string; status: string; amount: number; reason: string | null; error: string | null; stripe_refund_id: string | null; host_reversal_amount: number; created_at: string }[];
+  refund_requests: { id: string; status: string; amount: number; reason: string; note: string | null }[];
+  invoice: { number: string; issued_at: string } | null; settlement: Record<string, unknown> | null;
+  audit: { at: string; action: string; actor: string | null; reason: string | null }[];
+};

@@ -58,14 +58,7 @@ async def stripe_webhook(request: Request, session: AsyncSession = Depends(get_s
         return {"received": True, "duplicate": True}
 
     try:
-        if event_dict["type"] == "account.updated":
-            await host_service.handle_account_updated(session, event_dict["data"]["object"])
-        elif event_dict["type"] in REFUND_EVENTS:
-            await apply_refund_event(session, refund_from_stripe(event_dict["data"]["object"]))
-        elif event_dict["type"] in PAYOUT_EVENTS:
-            await payout_service.record_payout(session, event_dict.get("account"), event_dict["data"]["object"])
-        elif event_dict["type"] in PAYMENT_EVENTS:
-            await payment_service.apply_intent(session, intent_from_stripe(event_dict["data"]["object"]))
+        await dispatch_event(session, event_dict)
         row.processed_at = datetime.now(UTC)
     except Exception as exc:  # noqa: BLE001
         log.exception("stripe webhook handling failed: %s", event_dict.get("id"))
@@ -73,3 +66,16 @@ async def stripe_webhook(request: Request, session: AsyncSession = Depends(get_s
     await session.commit()
     kick_outbox()
     return {"received": True}
+
+
+async def dispatch_event(session: AsyncSession, event_dict: dict) -> None:
+    """Acts on one Stripe event. Every handler is idempotent, so running the same event again (the admin "run again" button) is safe."""
+    kind = event_dict["type"]
+    if kind == "account.updated":
+        await host_service.handle_account_updated(session, event_dict["data"]["object"])
+    elif kind in REFUND_EVENTS:
+        await apply_refund_event(session, refund_from_stripe(event_dict["data"]["object"]))
+    elif kind in PAYOUT_EVENTS:
+        await payout_service.record_payout(session, event_dict.get("account"), event_dict["data"]["object"])
+    elif kind in PAYMENT_EVENTS:
+        await payment_service.apply_intent(session, intent_from_stripe(event_dict["data"]["object"]))
