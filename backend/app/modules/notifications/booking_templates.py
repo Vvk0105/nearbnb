@@ -133,4 +133,59 @@ BOOKING_TEMPLATES: dict[str, tuple[str, str, str]] = {
         "<p>Hi {{ name }},</p><p>Your payment arrived after the dates had been released, so we refunded it in full (<strong>{{ total }}</strong>).</p>"
         + _DETAILS_HTML + "<p>The refund can take 5 to 10 days to appear on your statement.</p>",
     ),
+    "booking_cancelled_guest": (
+        "Booking cancelled: {{ title }}",
+        "Hi {{ name }},\n\n{% if cancelled_by == 'guest' %}Your booking was cancelled.{% elif cancelled_by == 'host' %}Sorry, the host had to cancel your booking.{% else %}Your booking was cancelled by NearBNB.{% endif %}"
+        + _DETAILS_TEXT + "{% if reason %}\nReason: {{ reason }}\n{% endif %}"
+        "\n{% if refund_amount > 0 %}Refund: {{ refund }}{% if cancelled_by == 'guest' %} ({{ refund_pct }}% under the {{ policy_name }} cancellation policy; the service fee is not refundable unless stated){% endif %}. "
+        "It can take 5 to 10 days to appear on your statement.{% else %}No refund is due under the {{ policy_name }} cancellation policy.{% endif %}\n",
+        "<p>Hi {{ name }},</p><p>{% if cancelled_by == 'guest' %}Your booking was cancelled.{% elif cancelled_by == 'host' %}Sorry, the host had to cancel your booking.{% else %}Your booking was cancelled by NearBNB.{% endif %}</p>"
+        + _DETAILS_HTML + "{% if reason %}<p><strong>Reason:</strong> {{ reason }}</p>{% endif %}"
+        "{% if refund_amount > 0 %}<p>Refund: <strong>{{ refund }}</strong>{% if cancelled_by == 'guest' %} ({{ refund_pct }}% under the {{ policy_name }} cancellation policy){% endif %}. "
+        "It can take 5 to 10 days to appear on your statement.</p>{% else %}<p>No refund is due under the {{ policy_name }} cancellation policy.</p>{% endif %}",
+    ),
+    "booking_cancelled_host": (
+        "Booking cancelled: {{ title }}",
+        "Hi {{ name }},\n\n{% if cancelled_by == 'guest' %}{{ guest_name }} cancelled their booking.{% elif cancelled_by == 'host' %}You cancelled this booking. The guest was refunded in full.{% else %}NearBNB cancelled this booking.{% endif %}"
+        + _DETAILS_TEXT + "{% if reason %}\nReason: {{ reason }}\n{% endif %}"
+        "\n{% if cancelled_by == 'host' %}No payout is due for this booking.{% else %}Your payout for this booking: {{ host_payout }}.{% endif %} The dates are open for new bookings again.\n",
+        "<p>Hi {{ name }},</p><p>{% if cancelled_by == 'guest' %}<strong>{{ guest_name }}</strong> cancelled their booking.{% elif cancelled_by == 'host' %}You cancelled this booking. The guest was refunded in full.{% else %}NearBNB cancelled this booking.{% endif %}</p>"
+        + _DETAILS_HTML + "{% if reason %}<p><strong>Reason:</strong> {{ reason }}</p>{% endif %}"
+        "<p>{% if cancelled_by == 'host' %}No payout is due for this booking.{% else %}Your payout for this booking: <strong>{{ host_payout }}</strong>.{% endif %} The dates are open for new bookings again.</p>",
+    ),
+    "refund_requested_admin": (
+        "Refund request to review: {{ reference }}",
+        "A host asked for a refund.\n\nBooking: {{ reference }}\nHost: {{ host_name }}\nAmount: {{ amount }}\nReason: {{ reason }}\n\nReview it: {{ url }}/admin/refunds\n",
+        "<p>A host asked for a refund.</p><p>Booking: <strong>{{ reference }}</strong><br>Host: {{ host_name }}<br>Amount: {{ amount }}<br>Reason: {{ reason }}</p>"
+        + _button("Review the request", "/admin/refunds"),
+    ),
+    "refund_request_decided_host": (
+        "Your refund request was {{ decision }}: {{ reference }}",
+        "Hi {{ name }},\n\nYour request to refund {{ amount }} on booking {{ reference }} was {{ decision }}.{% if decision_note %}\nNote from NearBNB: {{ decision_note }}{% endif %}"
+        "{% if decision == 'approved' %}\nThe amount is taken from your earnings for this booking.{% endif %}\n",
+        "<p>Hi {{ name }},</p><p>Your request to refund <strong>{{ amount }}</strong> on booking {{ reference }} was <strong>{{ decision }}</strong>.</p>"
+        "{% if decision_note %}<p>Note from NearBNB: {{ decision_note }}</p>{% endif %}"
+        "{% if decision == 'approved' %}<p>The amount is taken from your earnings for this booking.</p>{% endif %}",
+    ),
+    "refund_issued_guest": (
+        "You have been refunded {{ refund }}: {{ reference }}",
+        "Hi {{ name }},\n\nWe refunded {{ refund }} to your card for booking {{ reference }}.\nReason: {{ reason }}\nIt can take 5 to 10 days to appear on your statement.\n",
+        "<p>Hi {{ name }},</p><p>We refunded <strong>{{ refund }}</strong> to your card for booking {{ reference }}.</p><p>Reason: {{ reason }}</p>"
+        "<p>It can take 5 to 10 days to appear on your statement.</p>",
+    ),
+    "payout_sent_host": (
+        "Payout sent: {{ payout }} for {{ reference }}",
+        "Hi {{ name }},\n\nWe sent {{ payout }} for booking {{ reference }} to your Stripe account. Stripe pays it into your bank on its own schedule.\n",
+        "<p>Hi {{ name }},</p><p>We sent <strong>{{ payout }}</strong> for booking {{ reference }} to your Stripe account. Stripe pays it into your bank on its own schedule.</p>",
+    ),
+    "payout_failed_admin": (
+        "Payout keeps failing: {{ reference }}",
+        "The payout for booking {{ reference }} ({{ amount }}) failed repeatedly.\nError: {{ error }}\n\nCheck it in Admin > Bookings: {{ url }}/admin/bookings\n",
+        "<p>The payout for booking <strong>{{ reference }}</strong> ({{ amount }}) failed repeatedly.</p><p>Error: {{ error }}</p>" + _button("Open bookings", "/admin/bookings"),
+    ),
+    "host_cancellation_alert_admin": (
+        "Host cancellation alert: {{ host_name }}",
+        "{{ host_name }} ({{ host_email }}) has cancelled {{ count }} confirmed bookings in the last {{ days }} days.\n\nReview the host: {{ url }}/admin/hosts/{{ host_id }}\n",
+        "<p><strong>{{ host_name }}</strong> ({{ host_email }}) has cancelled {{ count }} confirmed bookings in the last {{ days }} days.</p>" + _button("Review the host", "/admin/hosts/{{ host_id }}"),
+    ),
 }

@@ -8,7 +8,9 @@ from app.jobs.celery_app import celery_app
 from app.modules.auth.models import OtpCode, RefreshToken
 from app.modules.bookings import service as booking_service
 from app.modules.notifications.service import kick_outbox, process_outbox
+from app.modules.payments import refunds as refund_service
 from app.modules.payments import service as payment_service
+from app.modules.payouts import service as payout_service
 
 
 async def _send_pending() -> int:
@@ -52,7 +54,7 @@ def expire_and_remind_bookings() -> dict[str, int]:
 
 async def _reconcile_payments() -> int:
     async with task_session() as session:
-        changed = await payment_service.reconcile_pending(session)
+        changed = await payment_service.reconcile_pending(session) + await refund_service.reconcile_pending_refunds(session)
         await session.commit()
     if changed:
         kick_outbox()
@@ -62,3 +64,29 @@ async def _reconcile_payments() -> int:
 @celery_app.task(name="payments.reconcile")
 def reconcile_payments() -> int:
     return asyncio.run(_reconcile_payments())
+
+
+async def _release_payouts() -> dict[str, int]:
+    async with task_session() as session:
+        counts = await payout_service.release_due(session)
+        await session.commit()
+    if counts["paid"] or counts["failed"]:
+        kick_outbox()
+    return counts
+
+
+@celery_app.task(name="payouts.release")
+def release_payouts() -> dict[str, int]:
+    return asyncio.run(_release_payouts())
+
+
+async def _advance_bookings() -> int:
+    async with task_session() as session:
+        moved = await booking_service.advance_status(session)
+        await session.commit()
+    return moved
+
+
+@celery_app.task(name="bookings.advance")
+def advance_bookings() -> int:
+    return asyncio.run(_advance_bookings())

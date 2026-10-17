@@ -5,6 +5,7 @@ import { api, ApiError, mediaUrl } from "../lib/api";
 import { money } from "../lib/format";
 import type { Photo, PublicProperty, PublicUnit } from "../lib/types";
 import { AvailabilityPanel } from "../components/availability/AvailabilityPanel";
+import { describeTiers } from "../components/CancelBooking";
 import { Alert, Card } from "../components/ui";
 
 function Gallery({ photos, name }: { photos: Photo[]; name: string }) {
@@ -94,6 +95,13 @@ export default function PropertyPage() {
         <div className="space-y-6 lg:col-span-2">
           {data.description && <section><h2 className="mb-2 text-lg font-semibold">About this place</h2><p className="whitespace-pre-wrap text-gray-700">{data.description}</p></section>}
           {data.rules && <section><h2 className="mb-2 text-lg font-semibold">House rules</h2><p className="whitespace-pre-wrap text-gray-700">{data.rules}</p></section>}
+          {data.cancellation && (
+            <section aria-label="Cancellation policy">
+              <h2 className="mb-2 text-lg font-semibold">Cancellation policy: {data.cancellation.name}</h2>
+              <ul className="list-disc space-y-0.5 pl-5 text-sm text-gray-700">{describeTiers(data.cancellation.tiers).map((l) => <li key={l}>{l}</li>)}</ul>
+              <p className="mt-1 text-xs text-gray-500">The service fee is not refundable. The policy that applies is saved with your booking.</p>
+            </section>
+          )}
         </div>
         <Alert kind="info">The exact address and check-in instructions are shared after your booking is confirmed.</Alert>
       </div>

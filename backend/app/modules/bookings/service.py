@@ -21,6 +21,7 @@ from app.core.errors import AppError
 from app.core.locks import lock_unit
 from app.modules.audit import service as audit
 from app.modules.availability import service as availability
+from app.modules.cancellations import service as cancellation_service
 from app.modules.bookings.models import (
     B_ACCEPTED, B_CANCELLED, B_CHECKED_IN, B_COMPLETED, B_CONFIRMED, B_EXPIRED, B_PAYMENT_EXPIRED, B_PAYMENT_PENDING,
     B_REJECTED, B_REQUESTED, B_WITHDRAWN, CONFIRMED_STATES, HOLDING, Booking, BookingEvent,
@@ -28,7 +29,8 @@ from app.modules.bookings.models import (
 from app.modules.hosts import service as host_service
 from app.modules.hosts.models import HostProfile
 from app.modules.notifications.service import enqueue_email
-from app.modules.payments.models import PAY_CANCELLED, PAY_CREATED, PAY_FAILED, PAY_PROCESSING, Invoice, Payment
+from app.modules.payments.models import PAY_CANCELLED, PAY_CREATED, PAY_FAILED, PAY_PROCESSING, Invoice, Payment, Refund
+from app.modules.payouts.models import Transfer
 from app.modules.payments.stripe_gateway import get_gateway
 from app.modules.pricing import service as pricing
 from app.modules.properties.models import Media, Property, Room, RoomOccupancy, Unit
@@ -133,11 +135,18 @@ async def _context(session: AsyncSession, b: Booking) -> dict:
     }
 
 
-async def _notify(session: AsyncSession, b: Booking, who: str, template: str) -> None:
+async def _notify(session: AsyncSession, b: Booking, who: str, template: str, **extra) -> None:
     guest = await session.get(User, b.guest_id)
     host = await session.get(HostProfile, b.host_id)
     host_user = await session.get(User, host.user_id)
-    _email(session, guest if who == "guest" else host_user, template, await _context(session, b))
+    _email(session, guest if who == "guest" else host_user, template, {**await _context(session, b), **extra})
+
+
+async def notify_admins(session: AsyncSession, template: str, context: dict) -> None:
+    """Email every active administrator (alerts that need a human)."""
+    admins = (await session.execute(select(User).where(User.is_admin.is_(True), User.status == "active"))).scalars().all()
+    for admin in admins:
+        _email(session, admin, template, {"url": get_settings().app_base_url.rstrip("/"), **context})
 
 
 # ---------- expiry and reminders ----------
@@ -185,6 +194,20 @@ async def expire_due(session: AsyncSession, now: datetime | None = None, limit: 
         audit.record(session, action=f"booking.{b.status}", entity_type="booking", entity_id=b.id, after={"status": b.status})
     # Holds with no booking left to process them (should not happen, but a stale row would block the room for good).
     await session.execute(delete(RoomOccupancy).where(RoomOccupancy.kind == "hold", RoomOccupancy.expires_at <= now))
+    return len(rows)
+
+
+async def advance_status(session: AsyncSession, now: datetime | None = None, limit: int = 500) -> int:
+    """Check-in and completion happen by the clock. There is no button for either."""
+    now = now or _now()
+    rows = (await session.execute(
+        select(Booking).where(Booking.status.in_((B_CONFIRMED, B_CHECKED_IN)), Booking.check_in <= now).order_by(Booking.check_in).limit(limit).with_for_update(skip_locked=True)
+    )).scalars().all()
+    for b in rows:
+        if b.check_out <= now:
+            transition(session, b, B_COMPLETED, note="stay ended")
+        elif b.status == B_CONFIRMED:
+            transition(session, b, B_CHECKED_IN, note="stay started")
     return len(rows)
 
 
@@ -274,9 +297,10 @@ async def create_request(session: AsyncSession, guest: User, unit_id: uuid.UUID,
         "phone": guest.phone, "email": guest.email, "member_since": guest.created_at.isoformat() if guest.created_at else None,
         "social_links": [{"platform": s.platform, "url": s.url} for s in guest.social_links],
     }
+    cancellation_policy = await cancellation_service.snapshot_for(session, prop.cancellation_template_key)
     policy_snapshot = {
         "response_minutes": response_minutes, "payment_minutes": payment_minutes,
-        "cancellation_template": prop.cancellation_template_key or await settings_service.get_value(session, "cancellation.default_template"),
+        "cancellation": cancellation_policy,
         "payout_anchor": overrides.get("payout.anchor") or await settings_service.get_value(session, "payout.anchor"),
         "payout_delay_hours": overrides["payout.delay_hours"] if "payout.delay_hours" in overrides else await settings_service.get_value(session, "payout.delay_hours"),
         "service_fee_refundable": await settings_service.get_value(session, "finance.service_fee_refundable"),
@@ -386,6 +410,13 @@ def _seconds_left(target: datetime | None, now: datetime) -> int | None:
     return max(0, int((target - now).total_seconds())) if target else None
 
 
+def _payout_view(b: Booking, tr: Transfer | None) -> dict:
+    """What the host will be paid for this booking, and where that stands."""
+    from app.modules.payouts import service as payouts  # (imported here: payouts also imports this module)
+
+    return payouts.payout_view(b, tr)
+
+
 async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str) -> list[dict]:
     """viewer: 'guest' | 'host' | 'admin'. Each side sees only what it is meant to (the guest never sees commission,
     the host never sees the guest's contact details before payment)."""
@@ -399,6 +430,10 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
     latest_payment: dict[uuid.UUID, Payment] = {}
     for pay in (await session.execute(select(Payment).where(Payment.booking_id.in_({b.id for b in bookings})).order_by(Payment.created_at))).scalars():
         latest_payment[pay.booking_id] = pay
+    refunds_by_booking: dict[uuid.UUID, list[Refund]] = {}
+    for rf in (await session.execute(select(Refund).where(Refund.booking_id.in_({b.id for b in bookings})).order_by(Refund.created_at))).scalars():
+        refunds_by_booking.setdefault(rf.booking_id, []).append(rf)
+    transfers = {t.booking_id: t for t in (await session.execute(select(Transfer).where(Transfer.booking_id.in_({b.id for b in bookings})))).scalars()}
     invoices = {i.booking_id: i for i in (await session.execute(select(Invoice).where(Invoice.booking_id.in_({b.id for b in bookings})))).scalars()}
     host_users: dict[uuid.UUID, tuple[HostProfile, User]] = {}
     for h in (await session.execute(select(HostProfile).where(HostProfile.id.in_({b.host_id for b in bookings})))).scalars():
@@ -426,6 +461,19 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
             "invoice_number": invoices[b.id].number if b.id in invoices else None,
             "confirmed_at": b.confirmed_at.isoformat() if b.confirmed_at else None,
         }
+        refunds = refunds_by_booking.get(b.id, [])
+        if refunds:
+            done = sum(r.amount for r in refunds if r.status == "succeeded")
+            waiting = sum(r.amount for r in refunds if r.status == "pending")
+            item["refund"] = {"refunded": done, "pending": waiting, "failed": sum(r.amount for r in refunds if r.status == "failed"),
+                              "state": "failed" if any(r.status == "failed" for r in refunds) else "pending" if waiting else "refunded"}
+        if b.cancelled_by_role:
+            item["cancelled"] = {"by": b.cancelled_by_role, "at": b.cancelled_at.isoformat() if b.cancelled_at else None,
+                                 "reason": b.closed_reason if b.cancelled_by_role != "guest" else None,
+                                 "policy": (b.settlement or {}).get("refund", {}).get("policy_name"), "refund_pct": (b.settlement or {}).get("refund", {}).get("refund_pct")}
+        if viewer in ("host", "admin"):
+            tr = transfers.get(b.id)
+            item["payout"] = _payout_view(b, tr)
         pay = latest_payment.get(b.id)
         if pay is not None:
             item["payment"] = {"status": pay.status, "failure_message": pay.failure_message if pay.status == "failed" else None,

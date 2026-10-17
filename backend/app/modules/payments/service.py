@@ -151,11 +151,12 @@ async def _refund_late(session: AsyncSession, payment: Payment, b: Booking, reas
     session.add(refund)
     await session.flush()
     try:
-        refund.stripe_refund_id = await asyncio.to_thread(
+        info = await asyncio.to_thread(
             get_gateway().refund_payment, intent_id=payment.stripe_payment_intent_id, amount=payment.amount, reason=reason,
             idempotency_key=f"late-refund-{payment.id}",
         )
-        refund.status = "succeeded"
+        refund.stripe_refund_id = info.id
+        refund.status = "succeeded" if info.status == "succeeded" else "pending"
     except Exception as exc:  # noqa: BLE001  (an admin sees failed refunds; Phase 7 adds the queue)
         refund.status, refund.error = "failed", str(exc)[:500]
         log.exception("automatic refund failed for payment %s", payment.id)

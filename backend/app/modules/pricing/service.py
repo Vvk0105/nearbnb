@@ -75,6 +75,10 @@ def compute_price(
         "commission": commission,
         "commission_percent": commission_percent,
         "host_payable": accommodation + cleaning_fee - commission,
+        # What later refund and payout maths needs, kept with the booking so a settings change cannot alter it:
+        "tax_applies_to": list(tax.applies_to) if tax else [],
+        "commission_base": commission_base,
+        "rounding": rounding,
     }
 
 

@@ -495,7 +495,7 @@ def test_the_real_gateway_charges_the_platform_with_a_transfer_group_and_an_idem
 
 def test_the_real_gateway_refunds_in_full_with_an_idempotency_key():
     rec = Recorder()
-    assert real_gateway(rec).refund_payment(intent_id="pi_1", amount=500, reason="late", idempotency_key="late-refund-1") == "re_1"
+    assert real_gateway(rec).refund_payment(intent_id="pi_1", amount=500, reason="late", idempotency_key="late-refund-1").id == "re_1"
     (_, params, options), = rec.calls
     assert params["payment_intent"] == "pi_1" and params["amount"] == 500 and options == {"idempotency_key": "late-refund-1"}
 

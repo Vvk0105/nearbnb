@@ -29,6 +29,7 @@ from app.core.db import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.modules.legal import service as legal_service  # noqa: E402
 from app.modules.notifications.models import EmailOutbox  # noqa: E402
+from app.modules.cancellations.service import seed_templates  # noqa: E402
 from app.modules.pricing.service import seed_tax_rules  # noqa: E402
 from app.modules.properties.admin_router import seed_catalogues  # noqa: E402
 
@@ -73,6 +74,7 @@ async def _clean_tables():
         await legal_service.seed_placeholders(session)
         await seed_catalogues(session)
         await seed_tax_rules(session)
+        await seed_templates(session)
     import shutil
 
     shutil.rmtree(os.environ["STORAGE_ROOT"], ignore_errors=True)

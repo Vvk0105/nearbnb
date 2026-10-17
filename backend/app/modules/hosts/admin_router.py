@@ -95,8 +95,14 @@ async def host_detail(host_id: str, session: AsyncSession = Depends(get_session)
                 "choices": list(definition.choices), "global_value": global_value.value,
                 "value": effective.value, "overridden": definition.key in overrides,
             })
+    from app.modules.cancellations.flow import host_cancellation_stats
+    from app.modules.payouts import service as payouts
+
+    records = await payouts.list_records(session, host.id)
     return {**data, "user": {"id": str(user.id), "email": user.email, "full_name": user.full_name, "phone": user.phone},
-            "overrides": catalogue}
+            "overrides": catalogue, "cancellations": await host_cancellation_stats(session, host.id),
+            "bank_payouts": [{"id": r.stripe_payout_id[:14], "amount": r.amount, "currency": r.currency, "status": r.status,
+                              "arrival_date": r.arrival_date.isoformat() if r.arrival_date else None, "failure_code": r.failure_code} for r in records]}
 
 
 @router.get("/{host_id}/documents/{doc_id}/file")

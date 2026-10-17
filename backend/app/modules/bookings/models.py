@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -67,9 +67,14 @@ class Booking(UUIDPrimaryKey, Base):
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     payment_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    cancelled_by_role: Mapped[str | None] = mapped_column(String(10))  # guest | host | admin
+    payout_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # an admin has stopped the host payout
+    payout_hold_note: Mapped[str | None] = mapped_column(Text)
+
     guest_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
     pricing_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
     policy_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
+    settlement: Mapped[dict | None] = mapped_column(JSONB)  # set when a booking is cancelled: refund and what the host keeps
 
 
 class BookingEvent(UUIDPrimaryKey, Base):

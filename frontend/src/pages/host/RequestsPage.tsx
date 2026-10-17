@@ -4,6 +4,7 @@ import { api, mediaUrl } from "../../lib/api";
 import { money } from "../../lib/format";
 import type { BookingGroup, BookingItem, BookingList } from "../../lib/types";
 import { BookingBadge, Countdown } from "../../components/bookings";
+import { HostBookingActions } from "../../components/HostBookingActions";
 import { Alert, Button, Card, TextArea, errorMessage } from "../../components/ui";
 
 const TABS: [BookingGroup, string][] = [["pending", "Needs reply"], ["awaiting_payment", "Awaiting payment"], ["upcoming", "Upcoming"], ["past", "Past"]];
@@ -61,6 +62,7 @@ function RequestCard({ b, onDone }: { b: BookingItem; onDone: () => Promise<unkn
           {b.status === "requested" && <Countdown target={b.expires_at} seconds={b.seconds_to_respond} label="Reply within" onDone={() => void onDone()} />}
           {b.status === "accepted" && <Countdown target={b.payment_deadline_at} seconds={b.seconds_to_pay} label="Guest must pay within" onDone={() => void onDone()} />}
           {b.closed_reason && b.status === "rejected" && <p className="text-xs text-gray-500">Your reason: {b.closed_reason}</p>}
+          <HostBookingActions b={b} />
           {error && <Alert>{error}</Alert>}
           {b.status === "requested" && !declining && (
             <div className="flex gap-2 pt-1">

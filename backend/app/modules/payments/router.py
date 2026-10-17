@@ -13,10 +13,14 @@ from app.modules.hosts import service as host_service
 from app.modules.notifications.service import kick_outbox
 from app.modules.payments import service as payment_service
 from app.modules.payments.models import StripeEvent
-from app.modules.payments.stripe_gateway import intent_from_stripe
+from app.modules.payments.refunds import apply_refund_event
+from app.modules.payments.stripe_gateway import intent_from_stripe, refund_from_stripe
+from app.modules.payouts import service as payout_service
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+REFUND_EVENTS = ("refund.created", "refund.updated", "refund.failed")
+PAYOUT_EVENTS = ("payout.created", "payout.updated", "payout.paid", "payout.failed", "payout.canceled")
 PAYMENT_EVENTS = ("payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.processing", "payment_intent.canceled")
 
 
@@ -56,6 +60,10 @@ async def stripe_webhook(request: Request, session: AsyncSession = Depends(get_s
     try:
         if event_dict["type"] == "account.updated":
             await host_service.handle_account_updated(session, event_dict["data"]["object"])
+        elif event_dict["type"] in REFUND_EVENTS:
+            await apply_refund_event(session, refund_from_stripe(event_dict["data"]["object"]))
+        elif event_dict["type"] in PAYOUT_EVENTS:
+            await payout_service.record_payout(session, event_dict.get("account"), event_dict["data"]["object"])
         elif event_dict["type"] in PAYMENT_EVENTS:
             await payment_service.apply_intent(session, intent_from_stripe(event_dict["data"]["object"]))
         row.processed_at = datetime.now(UTC)

@@ -107,7 +107,7 @@ export type SearchResult = { total: number; page: number; page_size: number; ite
 export type BookingMeta = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
 export type UnitRules = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
 export type PublicUnit = UnitData & { rules: UnitRules };
-export type PublicProperty = Omit<PropertyData, "units" | "checklist" | "pending_revisions" | "result"> & { units: PublicUnit[]; host_first_name: string };
+export type PublicProperty = Omit<PropertyData, "units" | "checklist" | "pending_revisions" | "result"> & { units: PublicUnit[]; host_first_name: string; cancellation?: { key: string; name: string; description: string; tiers: PolicyTier[] } };
 
 export type DayStatus = "available" | "partial" | "unavailable" | "past" | "closed";
 export type CalendarMonth = { timezone: string; year: number; month: number; days: { date: string; status: DayStatus }[] };
@@ -139,6 +139,9 @@ export type BookingItem = {
   seconds_to_respond: number | null; seconds_to_pay: number | null; closed_reason: string | null; can_withdraw: boolean;
   can_pay?: boolean; invoice_number?: string | null; confirmed_at?: string | null;
   payment?: { status: string; failure_message: string | null; intent_id?: string; charge_id?: string | null; failure_code?: string | null };
+  refund?: RefundState;
+  cancelled?: { by: "guest" | "host" | "admin"; at: string | null; reason: string | null; policy: string | null; refund_pct: number | null };
+  payout?: PayoutView;
   property: { id: string; name: string; suburb: string; state: string; cover_url: string | null };
   unit: { id: string; name: string }; room: string | null;
   // guest view
@@ -164,4 +167,30 @@ export type InvoiceData = {
   lines: { description: string; amount: number }[];
   tax: { name: string | null; rate_percent: number | null; amount: number; inclusive: boolean };
   payment: { reference: string; paid_at: string };
+};
+
+// ---- cancellation, refunds, payouts (Phase 6) ----
+export type PolicyTier = { hours_before: number; refund_pct: number };
+export type CancellationTemplate = { id: string; key: string; name: string; description: string; tiers: PolicyTier[]; strictness: number; active: boolean; version: number };
+export type RefundQuote = {
+  mode: string; policy_name: string; hours_before: number; refund_pct: number; accommodation: number; cleaning_fee: number; service_fee: number; tax: number; total: number;
+  host_accommodation: number; host_cleaning_fee: number; host_commission: number; host_payable: number;
+};
+export type CancelPreview = { booking_id: string; currency: string; paid: number; policy: { name: string; tiers: PolicyTier[] }; service_fee_refundable: boolean; refund: RefundQuote };
+export type RefundState = { refunded: number; pending: number; failed: number; state: "refunded" | "pending" | "failed" };
+export type PayoutView = {
+  state: "none" | "scheduled" | "held" | "paid" | "failed" | "reversed"; amount: number; eligible_at: string | null; hold?: boolean; hold_note?: string | null;
+  transferred_at?: string | null; reversed_amount?: number; error?: string | null; attempts?: number;
+};
+export type RefundRequestItem = {
+  id: string; booking_id: string; amount: number; reason: string; status: "pending" | "approved" | "rejected"; note: string | null; created_at: string;
+  reference?: string; property?: string; host?: string; currency?: string; paid?: number;
+};
+export type RefundRow = {
+  id: string; reference: string; booking_id: string; amount: number; currency: string; type: string; status: "pending" | "succeeded" | "failed";
+  reason: string | null; error: string | null; stripe_refund_id: string | null; host_reversal_amount: number; created_at: string;
+};
+export type HostCancellations = {
+  total: number; last_30_days: number; last_90_days: number; threshold: number; window_days: number; in_window: number; alert: boolean;
+  items: { reference: string; at: string | null; reason: string | null }[];
 };

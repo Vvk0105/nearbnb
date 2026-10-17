@@ -47,6 +47,13 @@ class IntentInfo:
     metadata: dict = field(default_factory=dict)
 
 
+@dataclass
+class RefundInfo:
+    id: str
+    status: str = "succeeded"  # succeeded | pending | requires_action | failed | canceled
+    failure_reason: str | None = None
+
+
 class StripeGateway(Protocol):
     is_fake: bool
 
@@ -56,7 +63,10 @@ class StripeGateway(Protocol):
     def create_payment_intent(self, *, amount: int, currency: str, booking_id: str, reference: str, description: str, idempotency_key: str) -> IntentInfo: ...
     def retrieve_payment_intent(self, intent_id: str) -> IntentInfo: ...
     def cancel_payment_intent(self, intent_id: str) -> bool: ...
-    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str: ...
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> RefundInfo: ...
+    def retrieve_refund(self, refund_id: str) -> RefundInfo: ...
+    def create_transfer(self, *, amount: int, currency: str, destination: str, source_transaction: str | None, transfer_group: str, idempotency_key: str) -> str: ...
+    def reverse_transfer(self, *, transfer_id: str, amount: int, idempotency_key: str) -> str: ...
 
 
 def _readable(exc: Exception) -> AppError:
@@ -179,7 +189,7 @@ class RealStripeGateway:
             log.warning("could not cancel payment intent %s", intent_id, exc_info=True)
             return False
 
-    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str:
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> RefundInfo:
         import stripe
 
         try:
@@ -189,7 +199,38 @@ class RealStripeGateway:
             )
         except stripe.StripeError as exc:
             raise _readable_payment(exc) from exc
-        return refund.id
+        return refund_from_stripe(refund)
+
+    def retrieve_refund(self, refund_id: str) -> RefundInfo:
+        import stripe
+
+        try:
+            return refund_from_stripe(self._client.v1.refunds.retrieve(refund_id))
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+
+    # ---- paying the host: a transfer from the platform balance to the host's connected account ----
+
+    def create_transfer(self, *, amount: int, currency: str, destination: str, source_transaction: str | None, transfer_group: str, idempotency_key: str) -> str:
+        import stripe
+
+        params = {"amount": amount, "currency": currency.lower(), "destination": destination, "transfer_group": transfer_group}
+        if source_transaction:
+            params["source_transaction"] = source_transaction  # funds come from this charge even before they are available
+        try:
+            transfer = self._client.v1.transfers.create(params=params, options={"idempotency_key": idempotency_key})
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+        return transfer.id
+
+    def reverse_transfer(self, *, transfer_id: str, amount: int, idempotency_key: str) -> str:
+        import stripe
+
+        try:
+            reversal = self._client.v1.transfers.reversals.create(transfer_id, params={"amount": amount}, options={"idempotency_key": idempotency_key})
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+        return reversal.id
 
 
 def _readable_payment(exc: Exception) -> AppError:
@@ -212,6 +253,12 @@ def intent_from_stripe(obj) -> IntentInfo:
         failure_code=error.get("decline_code") or error.get("code"), failure_message=error.get("message"),
         metadata=dict(data.get("metadata") or {}),
     )
+
+
+def refund_from_stripe(obj) -> RefundInfo:
+    """Works for a Refund from the API and for the dict inside a webhook event."""
+    data = _plain(obj) if hasattr(obj, "to_dict") or isinstance(obj, dict) else {"id": getattr(obj, "id", ""), "status": getattr(obj, "status", "succeeded")}
+    return RefundInfo(id=data.get("id", ""), status=data.get("status") or "succeeded", failure_reason=data.get("failure_reason"))
 
 
 def _plain(obj):
@@ -291,8 +338,17 @@ class FakeStripeGateway:
     def cancel_payment_intent(self, intent_id: str) -> bool:
         return True
 
-    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str:
-        return f"re_fake_{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]}"
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> RefundInfo:
+        return RefundInfo(id=f"re_fake_{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]}")
+
+    def retrieve_refund(self, refund_id: str) -> RefundInfo:
+        return RefundInfo(id=refund_id)
+
+    def create_transfer(self, *, amount: int, currency: str, destination: str, source_transaction: str | None, transfer_group: str, idempotency_key: str) -> str:
+        return f"tr_fake_{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]}"
+
+    def reverse_transfer(self, *, transfer_id: str, amount: int, idempotency_key: str) -> str:
+        return f"trr_fake_{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]}"
 
 
 def get_gateway() -> StripeGateway:

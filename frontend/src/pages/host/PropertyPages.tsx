@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { fieldLabel, fromCents, money, toCents } from "../../lib/format";
-import type { CalendarData, ListingMeta, PropertyData, UnitData } from "../../lib/types";
+import type { CalendarData, CancellationTemplate, ListingMeta, PropertyData, UnitData } from "../../lib/types";
+import { describeTiers } from "../../components/CancelBooking";
 import { PhotoManager } from "../../components/PhotoManager";
 import { PlaceInput } from "../../components/PlaceInput";
 import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
@@ -13,6 +14,23 @@ const TIMEZONES = ["Australia/Sydney", "Australia/Melbourne", "Australia/Brisban
 
 function useMeta() {
   return useQuery({ queryKey: ["listing-meta"], queryFn: () => api<ListingMeta>("/meta/listing"), staleTime: 300_000 });
+}
+
+function CancellationChoice({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const { data } = useQuery({ queryKey: ["cancellation-meta"], queryFn: () => api<CancellationTemplate[]>("/meta/cancellation"), staleTime: 300_000 });
+  const chosen = data?.find((t) => t.key === value);
+  return (
+    <div>
+      <label htmlFor="cancellation_template_key" className="mb-1 block text-sm font-medium text-gray-700">Cancellation policy</label>
+      <select id="cancellation_template_key" disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none disabled:bg-gray-50">
+        <option value="">Use the platform default</option>
+        {data?.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+      </select>
+      {chosen && <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-gray-600">{describeTiers(chosen.tiers).map((l) => <li key={l}>{l}</li>)}</ul>}
+      <p className="mt-1 text-xs text-gray-500">Shown to guests on your listing. Each booking keeps the policy it was made under, so changing this only affects new bookings.</p>
+    </div>
+  );
 }
 
 function useProperty(id: string | undefined) {
@@ -123,6 +141,7 @@ export function PropertyEditor() {
         postcode: property.postcode, country: property.country, timezone: property.timezone,
         latitude: property.latitude?.toString() ?? "", longitude: property.longitude?.toString() ?? "",
         checkin_instructions: property.checkin_instructions ?? "",
+        cancellation_template_key: property.cancellation_template_key ?? "",
       });
     }
   }, [property, loadedFor]);
@@ -241,6 +260,7 @@ export function PropertyEditor() {
             <Field id="latitude" label="Latitude (optional)" inputMode="decimal" value={form.latitude ?? ""} onChange={set("latitude")} disabled={locked} />
             <Field id="longitude" label="Longitude (optional)" inputMode="decimal" value={form.longitude ?? ""} onChange={set("longitude")} disabled={locked} />
           </div>
+          <CancellationChoice value={form.cancellation_template_key ?? ""} onChange={(v) => setForm({ ...form, cancellation_template_key: v })} disabled={locked} />
           <TextArea id="checkin_instructions" label="Check-in instructions" rows={3} value={form.checkin_instructions ?? ""} onChange={set("checkin_instructions")} disabled={locked} hint="Door codes, parking, how to get in. Guests only see this after their booking is confirmed." />
           {!locked && <Button type="submit" loading={details.busy}>Save details</Button>}
         </form>

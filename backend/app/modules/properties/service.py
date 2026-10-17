@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.cancellations import service as cancellation_service
 from app.core.errors import AppError
 from app.core.locks import lock_unit
 from app.core.images import process_photo
@@ -188,6 +189,9 @@ async def _validate_property_values(session: AsyncSession, changes: dict[str, An
         if ptype is None or not ptype.active:
             raise AppError(422, "INVALID_PROPERTY_TYPE", "Choose a valid property type.")
         changes["type_id"] = ptype.id
+    if "cancellation_template_key" in changes:
+        await cancellation_service.check_host_choice(session, changes["cancellation_template_key"] or None)
+        changes["cancellation_template_key"] = changes["cancellation_template_key"] or None
     if "country" in changes and changes["country"]:
         changes["country"] = changes["country"].upper()
     if "timezone" in changes and changes["timezone"]:
@@ -880,6 +884,8 @@ async def public_property(session: AsyncSession, property_id: uuid.UUID) -> dict
         }
     owner = await session.get(User, host.user_id)
     data["host_first_name"] = owner.full_name.split()[0]
+    policy = await cancellation_service.effective_template(session, prop.cancellation_template_key)
+    data["cancellation"] = {"key": policy.key, "name": policy.name, "description": policy.description, "tiers": policy.tiers}
     # The exact address is only revealed to a guest after a confirmed booking.
     for hidden in ("address_line1", "address_line2", "postcode"):
         data.pop(hidden, None)

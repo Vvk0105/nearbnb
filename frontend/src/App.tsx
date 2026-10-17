@@ -9,6 +9,8 @@ import { TripDetailPage, TripsPage } from "./pages/account/Trips";
 import { PayPage } from "./pages/account/Pay";
 import { InvoicePage } from "./pages/account/Invoice";
 import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
+import { AdminCancellationPage } from "./pages/admin/AdminCancellationPage";
+import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
@@ -54,6 +56,8 @@ export default function App() {
             <Route path="hosts" element={<HostsListPage />} />
             <Route path="hosts/:hostId" element={<HostDetailPage />} />
             <Route path="bookings" element={<AdminBookingsPage />} />
+            <Route path="refunds" element={<AdminRefundsPage />} />
+            <Route path="cancellation" element={<AdminCancellationPage />} />
             <Route path="listings" element={<ListingsPage />} />
             <Route path="listings/:propertyId" element={<ListingDetailPage />} />
             <Route path="catalogues" element={<CataloguesPage />} />

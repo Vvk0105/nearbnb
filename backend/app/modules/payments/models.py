@@ -62,6 +62,8 @@ class Refund(UUIDPrimaryKey, Base):
     stripe_refund_id: Mapped[str | None] = mapped_column(String(100))
     error: Mapped[str | None] = mapped_column(Text)
     initiated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    host_reversal_amount: Mapped[int] = mapped_column(Integer, default=0)  # taken back from the host's payout first
+    stripe_reversal_id: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -75,3 +77,24 @@ class Invoice(UUIDPrimaryKey, Base):
     number: Mapped[str] = mapped_column(String(30), unique=True)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     data: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+RR_PENDING, RR_APPROVED, RR_REJECTED = "pending", "approved", "rejected"
+
+
+class RefundRequest(UUIDPrimaryKey, Base):
+    """A host asking an admin to refund (part of) a guest's payment out of the host's own earnings, for example after a
+    complaint. Nothing is refunded until an admin approves."""
+
+    __tablename__ = "refund_requests"
+
+    booking_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id"), index=True)
+    host_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("host_profiles.id"), index=True)
+    amount: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default=RR_PENDING, index=True)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
+    refund_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("refunds.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

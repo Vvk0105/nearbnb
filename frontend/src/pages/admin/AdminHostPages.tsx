@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiUrl } from "../../lib/api";
-import { label } from "../../lib/format";
-import type { HostInfo } from "../../lib/types";
+import { label, money } from "../../lib/format";
+import type { HostCancellations, HostInfo } from "../../lib/types";
 import { Alert, Button, Card, Select, StatusBadge, TextArea, Field, errorMessage } from "../../components/ui";
 
 type HostRow = { id: string; state: string; email: string; full_name: string; submitted_at: string | null; created_at: string };
 type OverrideRow = { key: string; label: string; unit: string; type: string; choices: (string | number)[]; global_value: unknown; value: unknown; overridden: boolean };
-type HostDetail = HostInfo & { user: { id: string; email: string; full_name: string; phone: string | null }; overrides: OverrideRow[] };
+type BankPayout = { id: string; amount: number; currency: string; status: string; arrival_date: string | null; failure_code: string | null };
+type HostDetail = HostInfo & { user: { id: string; email: string; full_name: string; phone: string | null }; overrides: OverrideRow[]; cancellations?: HostCancellations; bank_payouts?: BankPayout[] };
 
 export function HostsListPage() {
   const [state, setState] = useState("pending_review");
@@ -138,6 +139,25 @@ export function HostDetailPage() {
         {data.stripe?.requirements && data.stripe.requirements.length > 0 && <p className="mt-2 text-sm text-gray-600">Stripe still needs: {data.stripe.requirements.map(label).join(", ")}</p>}
       </Card>
 
+      {data.cancellations && (
+        <Card title="Cancellations by this host">
+          <p className="text-sm">
+            <strong>{data.cancellations.total}</strong> in total · {data.cancellations.last_30_days} in the last 30 days · {data.cancellations.last_90_days} in the last 90 days
+          </p>
+          {data.cancellations.alert && <div className="mt-2"><Alert>This host has reached the alert level: {data.cancellations.in_window} cancellations in {data.cancellations.window_days} days (alert at {data.cancellations.threshold}). Suspension is your decision.</Alert></div>}
+          <ul className="mt-2 space-y-1 text-sm text-gray-700">
+            {data.cancellations.items.map((c) => <li key={c.reference}><span className="font-mono text-xs">{c.reference}</span> · {c.at?.slice(0, 10)} · {c.reason}</li>)}
+            {data.cancellations.items.length === 0 && <li className="text-gray-500">No cancellations.</li>}
+          </ul>
+        </Card>
+      )}
+      {data.bank_payouts && data.bank_payouts.length > 0 && (
+        <Card title="Bank payouts from Stripe">
+          <ul className="space-y-1 text-sm">
+            {data.bank_payouts.map((p) => <li key={p.id}>{p.arrival_date?.slice(0, 10) ?? "pending"} · {money(p.amount, p.currency)} · {p.status}{p.failure_code ? ` (${p.failure_code})` : ""}</li>)}
+          </ul>
+        </Card>
+      )}
       <Card title="Account status">
         {data.state === "suspended" ? (
           <div className="space-y-3">

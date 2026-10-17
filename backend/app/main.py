@@ -13,6 +13,8 @@ from app.core.errors import AppError, app_error_handler
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
 from app.modules.bookings.router import router as bookings_router
+from app.modules.cancellations.admin_router import router as cancellation_templates_router
+from app.modules.cancellations.router import router as cancellations_router
 from app.modules.hosts.admin_router import router as admin_hosts_router
 from app.modules.hosts.router import router as host_router
 from app.modules.legal.router import router as legal_router
@@ -71,4 +73,6 @@ api.include_router(search_router)
 api.include_router(places_router)
 api.include_router(admin_tax_router)
 api.include_router(bookings_router)
+api.include_router(cancellations_router)
+api.include_router(cancellation_templates_router)
 app.include_router(api)
