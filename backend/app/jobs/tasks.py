@@ -11,6 +11,7 @@ from app.modules.notifications.service import kick_outbox, process_outbox
 from app.modules.payments import refunds as refund_service
 from app.modules.payments import service as payment_service
 from app.modules.payouts import service as payout_service
+from app.modules.reviews import service as review_service
 
 
 async def _send_pending() -> int:
@@ -90,3 +91,17 @@ async def _advance_bookings() -> int:
 @celery_app.task(name="bookings.advance")
 def advance_bookings() -> int:
     return asyncio.run(_advance_bookings())
+
+
+async def _process_reviews() -> dict[str, int]:
+    async with task_session() as session:
+        counts = await review_service.process(session)
+        await session.commit()
+    if counts["invited"] or counts["reminded"]:
+        kick_outbox()
+    return counts
+
+
+@celery_app.task(name="reviews.process")
+def process_reviews() -> dict[str, int]:
+    return asyncio.run(_process_reviews())

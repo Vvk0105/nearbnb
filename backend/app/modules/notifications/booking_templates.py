@@ -188,4 +188,74 @@ BOOKING_TEMPLATES: dict[str, tuple[str, str, str]] = {
         "{{ host_name }} ({{ host_email }}) has cancelled {{ count }} confirmed bookings in the last {{ days }} days.\n\nReview the host: {{ url }}/admin/hosts/{{ host_id }}\n",
         "<p><strong>{{ host_name }}</strong> ({{ host_email }}) has cancelled {{ count }} confirmed bookings in the last {{ days }} days.</p>" + _button("Review the host", "/admin/hosts/{{ host_id }}"),
     ),
+    "review_invite_guest": (
+        "How was your stay? {{ title }}",
+        "Hi {{ name }},\n\nYour stay is over. Please tell other guests how it was." + _DETAILS_TEXT
+        + "\nYou can review until {{ closes }}. Reviews are blind: yours and the host's become visible together once both are in, or when the review period ends.\n\n{{ url }}/account/trips/{{ booking_id }}\n",
+        "<p>Hi {{ name }},</p><p>Your stay is over. Please tell other guests how it was.</p>" + _DETAILS_HTML
+        + "<p>You can review until <strong>{{ closes }}</strong>. Reviews are blind: yours and the host's become visible together once both are in, or when the review period ends.</p>"
+        + _button("Write a review", "/account/trips/{{ booking_id }}"),
+    ),
+    "review_invite_host": (
+        "Review your guest: {{ title }}",
+        "Hi {{ name }},\n\n{{ guest_name }}'s stay is over. Your review of the guest is private: only other hosts who get a request from them, and NearBNB, can see it." + _DETAILS_TEXT
+        + "\nYou can review until {{ closes }}.\n\n{{ url }}/host/requests\n",
+        "<p>Hi {{ name }},</p><p><strong>{{ guest_name }}</strong>'s stay is over. Your review of the guest is private: only other hosts who get a request from them, and NearBNB, can see it.</p>"
+        + _DETAILS_HTML + "<p>You can review until <strong>{{ closes }}</strong>.</p>" + _button("Review the guest", "/host/requests"),
+    ),
+    "review_reminder_guest": (
+        "Last days to review your stay: {{ title }}",
+        "Hi {{ name }},\n\nYou have not reviewed your stay yet. The review period ends on {{ closes }}.\n\n{{ url }}/account/trips/{{ booking_id }}\n",
+        "<p>Hi {{ name }},</p><p>You have not reviewed your stay at <strong>{{ title }}</strong> yet. The review period ends on <strong>{{ closes }}</strong>.</p>" + _button("Write a review", "/account/trips/{{ booking_id }}"),
+    ),
+    "review_reminder_host": (
+        "Last days to review your guest: {{ title }}",
+        "Hi {{ name }},\n\nYou have not reviewed {{ guest_name }} yet. The review period ends on {{ closes }}.\n\n{{ url }}/host/requests\n",
+        "<p>Hi {{ name }},</p><p>You have not reviewed <strong>{{ guest_name }}</strong> yet. The review period ends on <strong>{{ closes }}</strong>.</p>" + _button("Review the guest", "/host/requests"),
+    ),
+    "checkin_reminder_guest": (
+        "Your stay starts soon: {{ title }}",
+        "Hi {{ name }},\n\nYour stay starts {{ checkin }} (local time at the property, {{ tz }})." + _DETAILS_TEXT
+        + "\nYour host: {{ host_name }}{% if host_phone %} ({{ host_phone }}){% endif %}, {{ host_email }}\n"
+        "{% if checkin_instructions %}\nCheck-in instructions:\n{{ checkin_instructions }}\n{% endif %}\n{{ url }}/account/trips/{{ booking_id }}\n",
+        "<p>Hi {{ name }},</p><p>Your stay starts <strong>{{ checkin }}</strong> (local time at the property, {{ tz }}).</p>" + _DETAILS_HTML
+        + "<p>Your host: <strong>{{ host_name }}</strong>{% if host_phone %} ({{ host_phone }}){% endif %}, {{ host_email }}</p>"
+        "{% if checkin_instructions %}<p><strong>Check-in instructions</strong><br>{{ checkin_instructions }}</p>{% endif %}" + _button("Open my trip", "/account/trips/{{ booking_id }}"),
+    ),
+    "checkin_reminder_host": (
+        "Guest arriving soon: {{ title }}",
+        "Hi {{ name }},\n\n{{ guest_name }} arrives {{ checkin }} (local time at the property, {{ tz }})." + _DETAILS_TEXT
+        + "Guest contact: {{ guest_email }}{% if guest_phone %}, {{ guest_phone }}{% endif %}\n\n{{ url }}/host\n",
+        "<p>Hi {{ name }},</p><p><strong>{{ guest_name }}</strong> arrives <strong>{{ checkin }}</strong> (local time at the property, {{ tz }}).</p>" + _DETAILS_HTML
+        + "<p>Guest contact: {{ guest_email }}{% if guest_phone %}, {{ guest_phone }}{% endif %}</p>",
+    ),
+    "checkout_reminder_guest": (
+        "Check-out reminder: {{ title }}",
+        "Hi {{ name }},\n\nCheck-out is {{ checkout }} (local time at the property, {{ tz }}). Thank you for staying with us." + _DETAILS_TEXT,
+        "<p>Hi {{ name }},</p><p>Check-out is <strong>{{ checkout }}</strong> (local time at the property, {{ tz }}). Thank you for staying with us.</p>" + _DETAILS_HTML,
+    ),
+    "issue_received_reporter": (
+        "We received your report: {{ reference }}",
+        "Hi {{ name }},\n\nThanks for telling us. We received your report about booking {{ reference }} ({{ category }}).\n\n\"{{ issue_body }}\"\n\nOur team will look into it and email you the outcome.\n",
+        "<p>Hi {{ name }},</p><p>Thanks for telling us. We received your report about booking <strong>{{ reference }}</strong> ({{ category }}).</p>"
+        "<blockquote>{{ issue_body }}</blockquote><p>Our team will look into it and email you the outcome.</p>",
+    ),
+    "issue_reported_admin": (
+        "Problem reported: {{ reference }} ({{ category }})",
+        "{{ reporter }} ({{ role }}) reported a problem with booking {{ reference }} at {{ property }}.\nType: {{ category }}\n\n{{ issue_body }}\n\n{{ url }}/admin/issues\n",
+        "<p><strong>{{ reporter }}</strong> ({{ role }}) reported a problem with booking <strong>{{ reference }}</strong> at {{ property }}.</p><p>Type: {{ category }}</p>"
+        "<blockquote>{{ issue_body }}</blockquote>" + _button("Open the issue", "/admin/issues"),
+    ),
+    "issue_updated_reporter": (
+        "Update on your report: {{ reference }}",
+        "Hi {{ name }},\n\nYour report about booking {{ reference }} ({{ category }}) is now: {{ issue_status }}.{% if resolution %}\n\nFrom the NearBNB team:\n{{ resolution }}{% endif %}\n",
+        "<p>Hi {{ name }},</p><p>Your report about booking <strong>{{ reference }}</strong> ({{ category }}) is now: <strong>{{ issue_status }}</strong>.</p>"
+        "{% if resolution %}<p><strong>From the NearBNB team:</strong><br>{{ resolution }}</p>{% endif %}",
+    ),
+    "host_stripe_action_needed": (
+        "Action needed: Stripe needs more from you",
+        "Hi {{ name }},\n\nStripe needs more information before it can pay you: {{ requirements }}.\nUntil this is fixed your listings are hidden and payouts wait.\n\nFix it here: {{ url }}/host/payouts\n",
+        "<p>Hi {{ name }},</p><p>Stripe needs more information before it can pay you: <strong>{{ requirements }}</strong>.</p>"
+        "<p>Until this is fixed your listings are hidden and payouts wait.</p>" + _button("Fix it now", "/host/payouts"),
+    ),
 }

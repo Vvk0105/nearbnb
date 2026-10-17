@@ -203,9 +203,11 @@ async def advance_status(session: AsyncSession, now: datetime | None = None, lim
     rows = (await session.execute(
         select(Booking).where(Booking.status.in_((B_CONFIRMED, B_CHECKED_IN)), Booking.check_in <= now).order_by(Booking.check_in).limit(limit).with_for_update(skip_locked=True)
     )).scalars().all()
+    window_days = await settings_service.get_value(session, "review.window_days")
     for b in rows:
         if b.check_out <= now:
             transition(session, b, B_COMPLETED, note="stay ended")
+            b.review_closes_at = b.check_out + timedelta(days=window_days)
         elif b.status == B_CONFIRMED:
             transition(session, b, B_CHECKED_IN, note="stay started")
     return len(rows)
@@ -225,6 +227,26 @@ async def send_reminders(session: AsyncSession, now: datetime | None = None) -> 
             b.payment_reminder_sent_at = now
             await _notify(session, b, "guest", "booking_payment_reminder_guest")
             sent += 1
+    sent += await send_stay_reminders(session, now)
+    return sent
+
+
+async def send_stay_reminders(session: AsyncSession, now: datetime) -> int:
+    """A reminder before check-in (guest and host) and one before check-out (guest), each sent once."""
+    sent = 0
+    checkin_h = await settings_service.get_value(session, "reminder.checkin_hours_before")
+    checkout_h = await settings_service.get_value(session, "reminder.checkout_hours_before")
+    for b in (await session.execute(select(Booking).where(Booking.status == B_CONFIRMED, Booking.checkin_reminder_sent_at.is_(None), Booking.check_in > now,
+                                                          Booking.check_in <= now + timedelta(hours=checkin_h)).limit(200))).scalars():
+        b.checkin_reminder_sent_at = now
+        await _notify(session, b, "guest", "checkin_reminder_guest")
+        await _notify(session, b, "host", "checkin_reminder_host")
+        sent += 1
+    for b in (await session.execute(select(Booking).where(Booking.status.in_((B_CONFIRMED, B_CHECKED_IN)), Booking.checkout_reminder_sent_at.is_(None), Booking.check_in <= now,
+                                                          Booking.check_out > now, Booking.check_out <= now + timedelta(hours=checkout_h)).limit(200))).scalars():
+        b.checkout_reminder_sent_at = now
+        await _notify(session, b, "guest", "checkout_reminder_guest")
+        sent += 1
     return sent
 
 
@@ -430,14 +452,24 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
     latest_payment: dict[uuid.UUID, Payment] = {}
     for pay in (await session.execute(select(Payment).where(Payment.booking_id.in_({b.id for b in bookings})).order_by(Payment.created_at))).scalars():
         latest_payment[pay.booking_id] = pay
+    host_users: dict[uuid.UUID, tuple[HostProfile, User]] = {}
+    for h in (await session.execute(select(HostProfile).where(HostProfile.id.in_({b.host_id for b in bookings})))).scalars():
+        host_users[h.id] = (h, await session.get(User, h.user_id))
+    from app.modules.issues.models import Issue
+    from app.modules.reviews import service as review_service
+
+    window_days = await settings_service.get_value(session, "review.window_days")
+    reviews_by_booking = await review_service.reviews_for(session, {b.id for b in bookings})
+    issues_by_booking: dict[uuid.UUID, list[Issue]] = {}
+    if viewer in ("guest", "host"):
+        mine = {b.guest_id if viewer == "guest" else host_users[b.host_id][1].id for b in bookings}
+        for i in (await session.execute(select(Issue).where(Issue.booking_id.in_({b.id for b in bookings}), Issue.reporter_id.in_(mine)).order_by(Issue.created_at))).scalars():
+            issues_by_booking.setdefault(i.booking_id, []).append(i)
     refunds_by_booking: dict[uuid.UUID, list[Refund]] = {}
     for rf in (await session.execute(select(Refund).where(Refund.booking_id.in_({b.id for b in bookings})).order_by(Refund.created_at))).scalars():
         refunds_by_booking.setdefault(rf.booking_id, []).append(rf)
     transfers = {t.booking_id: t for t in (await session.execute(select(Transfer).where(Transfer.booking_id.in_({b.id for b in bookings})))).scalars()}
     invoices = {i.booking_id: i for i in (await session.execute(select(Invoice).where(Invoice.booking_id.in_({b.id for b in bookings})))).scalars()}
-    host_users: dict[uuid.UUID, tuple[HostProfile, User]] = {}
-    for h in (await session.execute(select(HostProfile).where(HostProfile.id.in_({b.host_id for b in bookings})))).scalars():
-        host_users[h.id] = (h, await session.get(User, h.user_id))
     out = []
     for b in bookings:
         prop, unit, tz = props[b.property_id], units[b.unit_id], ZoneInfo(b.timezone)
@@ -461,6 +493,11 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
             "invoice_number": invoices[b.id].number if b.id in invoices else None,
             "confirmed_at": b.confirmed_at.isoformat() if b.confirmed_at else None,
         }
+        if viewer in ("guest", "host"):
+            item["review"] = review_service.review_info(b, reviews_by_booking.get(b.id, []), viewer, now, window_days)
+            item["issues"] = [{"id": str(i.id), "category": i.category, "body": i.body, "status": i.status, "resolution": i.resolution, "created_at": i.created_at.isoformat()}
+                              for i in issues_by_booking.get(b.id, [])]
+            item["can_report_issue"] = b.status in ("confirmed", "checked_in", "completed", "cancelled")
         refunds = refunds_by_booking.get(b.id, [])
         if refunds:
             done = sum(r.amount for r in refunds if r.status == "succeeded")
@@ -490,6 +527,8 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
                      "social_links": g.get("social_links", [])}
             if shared or viewer == "admin":
                 guest.update({"email": g.get("email"), "phone": g.get("phone"), "dob": g.get("dob")})
+            if viewer == "host":
+                guest["reviews"] = await review_service.guest_summary(session, b.guest_id)
             item["guest"] = guest
             item["price"] = {k: p[k] for k in ("nights", "hours", "accommodation", "cleaning_fee", "commission", "commission_percent", "host_payable")}
             if viewer == "admin":

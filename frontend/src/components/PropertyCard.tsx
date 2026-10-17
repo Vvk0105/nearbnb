@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { mediaUrl } from "../lib/api";
 import { money } from "../lib/format";
 import type { SearchItem } from "../lib/types";
+import { RatingSummary } from "./Reviews";
 
 export function PropertyCard({ item, carry }: { item: SearchItem; carry: string }) {
   const image = mediaUrl(item.thumb_url);
@@ -17,6 +18,7 @@ export function PropertyCard({ item, carry }: { item: SearchItem; carry: string 
           {[item.type_name, [item.suburb, item.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}
           {item.distance_km !== null && ` · ${item.distance_km} km away`}
         </p>
+        {item.rating && <p className="mt-1"><RatingSummary average={item.rating.average} count={item.rating.count} /></p>}
         <p className="mt-2 text-sm"><span className="font-semibold">{money(item.min_price, item.currency)}</span> <span className="text-gray-500">/ 24 hours{item.units.length > 1 ? " · from" : ""}</span></p>
       </div>
     </Link>

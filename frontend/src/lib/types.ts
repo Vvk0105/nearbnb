@@ -100,14 +100,14 @@ export type CalendarData = {
 export type SearchItem = {
   id: string; name: string; type_name: string | null; suburb: string; state: string;
   cover_url: string | null; thumb_url: string | null; currency: string; min_price: number; distance_km: number | null;
-  units: { id: string; name: string; price_per_24h: number; capacity: number }[];
+  units: { id: string; name: string; price_per_24h: number; capacity: number }[]; rating?: Rating | null;
 };
 export type SearchResult = { total: number; page: number; page_size: number; items: SearchItem[]; hint: string | null };
 
 export type BookingMeta = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
 export type UnitRules = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
 export type PublicUnit = UnitData & { rules: UnitRules };
-export type PublicProperty = Omit<PropertyData, "units" | "checklist" | "pending_revisions" | "result"> & { units: PublicUnit[]; host_first_name: string; cancellation?: { key: string; name: string; description: string; tiers: PolicyTier[] } };
+export type PublicProperty = Omit<PropertyData, "units" | "checklist" | "pending_revisions" | "result"> & { units: PublicUnit[]; host_first_name: string; rating?: Rating | null; cancellation?: { key: string; name: string; description: string; tiers: PolicyTier[] } };
 
 export type DayStatus = "available" | "partial" | "unavailable" | "past" | "closed";
 export type CalendarMonth = { timezone: string; year: number; month: number; days: { date: string; status: DayStatus }[] };
@@ -142,6 +142,9 @@ export type BookingItem = {
   refund?: RefundState;
   cancelled?: { by: "guest" | "host" | "admin"; at: string | null; reason: string | null; policy: string | null; refund_pct: number | null };
   payout?: PayoutView;
+  review?: ReviewInfo | null;
+  issues?: IssueItem[];
+  can_report_issue?: boolean;
   property: { id: string; name: string; suburb: string; state: string; cover_url: string | null };
   unit: { id: string; name: string }; room: string | null;
   // guest view
@@ -151,7 +154,7 @@ export type BookingItem = {
   // host / admin view
   guest?: {
     full_name: string; age: number | null; member_since: string | null; email_verified: boolean;
-    social_links: { platform: string; url: string }[]; email?: string; phone?: string; dob?: string;
+    social_links: { platform: string; url: string }[]; email?: string; phone?: string; dob?: string; reviews?: GuestReviewSummary;
   };
 };
 export type BookingList = { items: BookingItem[]; total: number; page: number; page_size: number; counts: Record<BookingGroup, number> };
@@ -237,4 +240,24 @@ export type AdminBookingDetail = BookingItem & {
   refund_requests: { id: string; status: string; amount: number; reason: string; note: string | null }[];
   invoice: { number: string; issued_at: string } | null; settlement: Record<string, unknown> | null;
   audit: { at: string; action: string; actor: string | null; reason: string | null }[];
+};
+
+// ---- reviews, issues and reminders (Phase 8) ----
+export type Rating = { average: number; count: number };
+export type ReviewInfo = {
+  closes_at: string; open: boolean; can_review: boolean;
+  mine: { rating: number; comment: string; status: "submitted" | "published" | "hidden"; submitted_at: string } | null;
+  theirs: { rating: number; comment: string } | null;
+};
+export type IssueItem = { id: string; booking_id?: string; reference?: string | null; property?: string | null; role?: string; category: string; body: string; status: string; resolution: string | null; created_at: string };
+export type PublicReview = { id: string; rating: number; comment: string; author: string; month: string | null };
+export type PublicReviews = { total: number; page: number; page_size: number; average: number | null; count: number; items: PublicReview[] };
+export type GuestReviewSummary = { count: number; average: number | null; completed_stays: number; items: { rating: number; comment: string; month: string | null }[] };
+export type AdminReviewRow = {
+  id: string; reference: string; booking_id: string; property: string; direction: "guest_to_host" | "host_to_guest"; rating: number; comment: string; status: "submitted" | "published" | "hidden";
+  author: string; author_email: string; subject: string; submitted_at: string; published_at: string | null; hidden_reason: string | null;
+};
+export type AdminIssueRow = IssueItem & {
+  admin_note: string | null; blocks_payout: boolean; updated_at: string; resolved_at: string | null; booking_status: string;
+  reporter: { name: string; email: string }; guest: { name: string; email: string }; host: { name: string; email: string };
 };

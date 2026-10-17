@@ -323,6 +323,16 @@ async def _notify_active(session: AsyncSession, host: HostProfile) -> None:
     enqueue_email(session, to_email=owner.email, template="host_active", context={"name": owner.full_name}, user_id=owner.id)
 
 
+async def _notify_if_lost(session: AsyncSession, host: HostProfile, was_ready: bool) -> None:
+    """Email the host once when Stripe stops letting them receive money (it needs more information from them)."""
+    if was_ready and not stripe_ready(host) and host.review_status == REVIEW_APPROVED:
+        owner = await session.get(User, host.user_id)
+        audit.record(session, action="host.stripe_action_needed", entity_type="host", entity_id=host.id, after={"requirements": host.stripe_requirements})
+        enqueue_email(session, to_email=owner.email, template="host_stripe_action_needed", user_id=owner.id,
+                      context={"name": owner.full_name, "requirements": ", ".join(r.replace("_", " ").replace(".", " ") for r in (host.stripe_requirements or [])) or "some details",
+                               "url": get_settings().app_base_url.rstrip("/")})
+
+
 async def onboarding_link(session: AsyncSession, host: HostProfile, user: User) -> str:
     if host.review_status != REVIEW_APPROVED:
         raise AppError(409, "NOT_APPROVED", "Payout setup opens after your application is approved.")
@@ -347,8 +357,10 @@ async def refresh_stripe(session: AsyncSession, host: HostProfile) -> None:
     if host.stripe_account_id is None:
         return
     status = await asyncio.to_thread(get_gateway().retrieve_account, host.stripe_account_id)
+    was_ready = stripe_ready(host)
     if apply_stripe_status(host, status):
         await _notify_active(session, host)
+    await _notify_if_lost(session, host, was_ready)
 
 
 async def dev_complete_stripe(session: AsyncSession, host: HostProfile, user: User) -> None:
@@ -371,8 +383,10 @@ async def handle_account_updated(session: AsyncSession, account: dict) -> None:
     host = (await session.execute(select(HostProfile).where(HostProfile.stripe_account_id == account.get("id")))).scalar_one_or_none()
     if host is None:
         return
+    was_ready = stripe_ready(host)
     if apply_stripe_status(host, status_from_stripe_account(account)):
         await _notify_active(session, host)
+    await _notify_if_lost(session, host, was_ready)
 
 
 # ---------- per-host setting overrides ----------

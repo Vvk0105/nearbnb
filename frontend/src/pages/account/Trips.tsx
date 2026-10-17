@@ -8,6 +8,7 @@ import type { BookingGroup, BookingItem, BookingList, PriceBreakdown, Quote } fr
 import { PriceBreakdownView } from "../../components/availability/AvailabilityPanel";
 import { BookingBadge, Countdown } from "../../components/bookings";
 import { CancelBooking } from "../../components/CancelBooking";
+import { ReportProblem, ReviewBox } from "../../components/Reviews";
 import { Alert, Button, Card, errorMessage } from "../../components/ui";
 
 const TABS: ["all" | BookingGroup | "cancelled", string][] = [
@@ -188,6 +189,8 @@ export function TripDetailPage() {
         <Card title="Your host"><p className="text-sm">{b.host.name}<br />{b.host.email}{b.host.phone ? <><br />{b.host.phone}</> : null}</p></Card>
       )}
 
+      {b.status === "completed" && <ReviewBox booking={b} as="guest" />}
+      <ReportProblem booking={b} as="guest" />
       {b.status === "confirmed" && <CancelBooking booking={b} />}
       {b.can_withdraw && (
         <div className="space-y-2">

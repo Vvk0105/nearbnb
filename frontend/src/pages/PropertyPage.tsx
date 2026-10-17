@@ -6,6 +6,7 @@ import { money } from "../lib/format";
 import type { Photo, PublicProperty, PublicUnit } from "../lib/types";
 import { AvailabilityPanel } from "../components/availability/AvailabilityPanel";
 import { describeTiers } from "../components/CancelBooking";
+import { PropertyReviews, RatingSummary } from "../components/Reviews";
 import { Alert, Card } from "../components/ui";
 
 function Gallery({ photos, name }: { photos: Photo[]; name: string }) {
@@ -88,6 +89,7 @@ export default function PropertyPage() {
       <div>
         <Link to="/search" className="text-sm text-brand-700 hover:underline">← Search</Link>
         <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{data.name}</h1>
+        {data.rating && <p className="mt-1"><RatingSummary average={data.rating.average} count={data.rating.count} /></p>}
         <p className="text-gray-600">{[data.type_name, [data.suburb, data.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")} · Hosted by {data.host_first_name}</p>
       </div>
       <Gallery photos={data.photos} name={data.name} />
@@ -95,6 +97,7 @@ export default function PropertyPage() {
         <div className="space-y-6 lg:col-span-2">
           {data.description && <section><h2 className="mb-2 text-lg font-semibold">About this place</h2><p className="whitespace-pre-wrap text-gray-700">{data.description}</p></section>}
           {data.rules && <section><h2 className="mb-2 text-lg font-semibold">House rules</h2><p className="whitespace-pre-wrap text-gray-700">{data.rules}</p></section>}
+          <PropertyReviews propertyId={data.id} />
           {data.cancellation && (
             <section aria-label="Cancellation policy">
               <h2 className="mb-2 text-lg font-semibold">Cancellation policy: {data.cancellation.name}</h2>

@@ -11,6 +11,7 @@ from app.modules.bookings.models import (
     B_ACCEPTED, B_CANCELLED, B_CHECKED_IN, B_COMPLETED, B_CONFIRMED, B_PAYMENT_PENDING, B_REQUESTED, Booking, BookingEvent,
 )
 from app.modules.hosts import service as host_service
+from app.modules.issues.models import OPEN_STATES, Issue
 from app.modules.hosts.models import REVIEW_PENDING, HostProfile
 from app.modules.payments.models import PAY_FAILED, Invoice, Payment, Refund, RefundRequest, StripeEvent
 from app.modules.payouts import service as payouts
@@ -178,6 +179,7 @@ async def admin_dashboard(session: AsyncSession) -> dict:
         ("held_payouts", "Payouts on hold", await count(Booking, Booking.payout_hold.is_(True)), "/admin/payouts", "info"),
         ("failed_webhooks", "Stripe webhooks that failed", await count(StripeEvent, StripeEvent.error.is_not(None), StripeEvent.processed_at.is_(None)), "/admin/webhooks", "problem"),
         ("host_cancellations", "Hosts at the cancellation alert level", len(alert_hosts), "/admin/hosts", "problem"),
+        ("open_issues", "Reported problems to look at", await count(Issue, Issue.status.in_(OPEN_STATES)), "/admin/issues", "action"),
         ("suspended_users", "Suspended users", await count(User, User.status == "suspended"), "/admin/users", "info"),
     ]
     recent = (await session.execute(select(AuditLog, User.email).join(User, User.id == AuditLog.actor_id, isouter=True).order_by(AuditLog.id.desc()).limit(8))).all()

@@ -121,9 +121,16 @@ _DEFS: list[SettingDef] = [
                ["instagram.com", "facebook.com", "linkedin.com", "x.com", "twitter.com"],
                "Social profile URLs must belong to one of these domains."),
     SettingDef("guest.min_age", "Guest verification", "Minimum guest age", "int", 18, min=13, max=99, unit="years"),
+    # Reminders
+    SettingDef("reminder.checkin_hours_before", "Reminders", "Check-in reminder", "int", 24,
+               "Guest and host get a reminder this many hours before check-in.", min=1, max=168, unit="h"),
+    SettingDef("reminder.checkout_hours_before", "Reminders", "Check-out reminder", "int", 3,
+               "The guest gets a reminder this many hours before check-out.", min=1, max=48, unit="h"),
     # Reviews and alerts
     SettingDef("review.window_days", "Reviews", "Review window", "int", 14,
                "Days after completion that reviews can be submitted.", min=1, max=90, unit="days"),
+    SettingDef("review.reminder_days_before_close", "Reviews", "Review reminder", "int", 3,
+               "Whoever has not reviewed yet is reminded this many days before the window closes.", min=1, max=30, unit="days"),
     SettingDef("alerts.host_cancellation_count", "Alerts", "Host cancellation alert: count", "int", 3, min=1, max=100),
     SettingDef("alerts.host_cancellation_days", "Alerts", "Host cancellation alert: window", "int", 30,
                min=1, max=365, unit="days"),

@@ -13,6 +13,7 @@ import { AdminBookingDetailPage } from "./pages/admin/AdminBookingDetailPage";
 import { AdminCancellationPage } from "./pages/admin/AdminCancellationPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminExportsPage, AdminPaymentsPage, AdminPayoutsPage, AdminWebhooksPage } from "./pages/admin/AdminMoneyPages";
+import { AdminIssuesPage, AdminReviewsPage } from "./pages/admin/AdminReviewsIssuesPages";
 import { AdminUserDetailPage, AdminUsersPage } from "./pages/admin/AdminUsersPages";
 import { MoneyPage } from "./pages/host/MoneyPage";
 import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
@@ -67,6 +68,8 @@ export default function App() {
             <Route path="users/:userId" element={<AdminUserDetailPage />} />
             <Route path="payments" element={<AdminPaymentsPage />} />
             <Route path="payouts" element={<AdminPayoutsPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="issues" element={<AdminIssuesPage />} />
             <Route path="webhooks" element={<AdminWebhooksPage />} />
             <Route path="exports" element={<AdminExportsPage />} />
             <Route path="refunds" element={<AdminRefundsPage />} />

@@ -5,6 +5,7 @@ import { money } from "../../lib/format";
 import type { BookingGroup, BookingItem, BookingList } from "../../lib/types";
 import { BookingBadge, Countdown } from "../../components/bookings";
 import { HostBookingActions } from "../../components/HostBookingActions";
+import { ReportProblem, ReviewBox, Stars } from "../../components/Reviews";
 import { Alert, Button, Card, TextArea, errorMessage } from "../../components/ui";
 
 const TABS: [BookingGroup, string][] = [["pending", "Needs reply"], ["awaiting_payment", "Awaiting payment"], ["upcoming", "Upcoming"], ["past", "Past"]];
@@ -55,6 +56,13 @@ function RequestCard({ b, onDone }: { b: BookingItem; onDone: () => Promise<unkn
                   ))}
                 </p>
               )}
+              {g.reviews && (
+                <div className="mt-2 text-xs text-gray-700" aria-label="Guest track record">
+                  {g.reviews.count > 0 && g.reviews.average ? <p className="flex items-center gap-2"><Stars value={g.reviews.average} /> from {g.reviews.count} host{g.reviews.count === 1 ? "" : "s"}</p> : <p className="text-gray-500">No reviews from other hosts yet.</p>}
+                  <p className="text-gray-500">{g.reviews.completed_stays} stay{g.reviews.completed_stays === 1 ? "" : "s"} completed on NearBnB</p>
+                  {g.reviews.items.map((x, n) => <p key={n} className="mt-1 border-l-2 border-gray-200 pl-2">"{x.comment || "No comment"}" <span className="text-gray-400">· {x.rating}/5{x.month ? `, ${x.month}` : ""}</span></p>)}
+                </div>
+              )}
               {g.email && <p className="mt-1 text-xs text-gray-700">{g.email}{g.phone ? ` · ${g.phone}` : ""}</p>}
               {!g.email && <p className="mt-1 text-xs text-gray-500">Contact details are shared once the guest has paid.</p>}
             </div>
@@ -63,6 +71,8 @@ function RequestCard({ b, onDone }: { b: BookingItem; onDone: () => Promise<unkn
           {b.status === "accepted" && <Countdown target={b.payment_deadline_at} seconds={b.seconds_to_pay} label="Guest must pay within" onDone={() => void onDone()} />}
           {b.closed_reason && b.status === "rejected" && <p className="text-xs text-gray-500">Your reason: {b.closed_reason}</p>}
           <HostBookingActions b={b} />
+          {b.status === "completed" && <ReviewBox booking={b} as="host" />}
+          <ReportProblem booking={b} as="host" />
           {error && <Alert>{error}</Alert>}
           {b.status === "requested" && !declining && (
             <div className="flex gap-2 pt-1">

@@ -16,6 +16,8 @@ export function AdminLayout() {
         <NavLink to="/admin/users" className={tab}>Users</NavLink>
         <NavLink to="/admin/listings" className={tab}>Listings</NavLink>
         <NavLink to="/admin/bookings" className={tab}>Bookings</NavLink>
+        <NavLink to="/admin/issues" className={tab}>Issues</NavLink>
+        <NavLink to="/admin/reviews" className={tab}>Reviews</NavLink>
         <NavLink to="/admin/payments" className={tab}>Payments</NavLink>
         <NavLink to="/admin/payouts" className={tab}>Payouts</NavLink>
         <NavLink to="/admin/refunds" className={tab}>Refunds</NavLink>

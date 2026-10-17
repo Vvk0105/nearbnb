@@ -164,6 +164,17 @@ No new database tables: this phase is screens and queries on top of Phases 4 to 
 
 With this phase an admin can run the whole flow (applications, listings, bookings, cancellations, refunds, payouts, failures) from the screens, without database access. Reviews, issue reports and calendar sync come in later phases and will add their own queues.
 
+## What exists after Phase 8
+
+- **Reviews (blind):** once a stay is completed, guest and host each have the review window (14 days, Settings > Reviews) to leave one review: a rating of 1 to 5 and an optional comment. Reviews cannot be edited or replied to. Neither side sees the other's review until **both are in or the window closes**, then they publish together. Both sides are invited by email when the stay ends, and whoever has not reviewed is reminded 3 days before it closes.
+- **Guest review of the stay is public:** it appears on the property page (first name and month only) and feeds the property's star rating, shown on search results and the property page. **The host's review of the guest is private:** only hosts who get a request from that guest, and admins, ever see it. A guest never sees what a host wrote about them.
+- **What a host learns about a guest:** on every booking request, the guest's average rating from other hosts, their comments and how many stays they have completed (alongside name, age and social links).
+- **Moderation (Admin > Reviews):** find any review, hide it with a reason (it leaves the page and the rating everywhere) and restore it. Every action is audited.
+- **Reporting a problem:** after a booking is confirmed (including after the stay or a cancellation), the guest or host can report a problem, choosing from a short list of types and describing it. The reporter gets an acknowledgement; admins get an email. In **Admin > Issues** an admin moves it from open to in progress to resolved or dismissed, keeps an internal note (never shown to the reporter) and writes the message the reporter receives. An admin can tick **Hold the host payout** while an issue is open; closing the issue releases the hold.
+- **More emails:** check-in reminder (guest and host, 24 hours before by default), check-out reminder (guest, 3 hours before), review invitation and reminder, report received, report outcome, and an "action needed" email to a host when Stripe stops being able to pay them. Reminder times are in Settings > Reminders.
+- **Jobs:** reminders run with the existing minute job; invitations, review reminders and publishing run every 15 minutes.
+- The admin dashboard shows the number of open problems.
+
 ## Production
 
 See [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md). Frontend goes to Vercel (`frontend/vercel.json`, `frontend/.env.example`); the API runs on the server behind Caddy (`Caddyfile`, `docker-compose.prod.yml`).

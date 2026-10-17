@@ -62,7 +62,9 @@ def payout_view(b: Booking, tr: Transfer | None) -> dict:
 async def _blocked(session: AsyncSession, b: Booking) -> bool:
     open_refund = (await session.execute(select(Refund.id).where(Refund.booking_id == b.id, Refund.status.in_(("pending", "failed"))).limit(1))).first()
     open_request = (await session.execute(select(RefundRequest.id).where(RefundRequest.booking_id == b.id, RefundRequest.status == RR_PENDING).limit(1))).first()
-    return open_refund is not None or open_request is not None
+    from app.modules.issues import service as issues
+
+    return open_refund is not None or open_request is not None or await issues.blocks_payout(session, b.id)
 
 
 async def release_due(session: AsyncSession, now: datetime | None = None, limit: int = 200) -> dict:

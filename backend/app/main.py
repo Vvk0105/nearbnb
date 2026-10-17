@@ -17,6 +17,7 @@ from app.modules.bookings.router import router as bookings_router
 from app.modules.dashboards.router import router as dashboards_router
 from app.modules.cancellations.admin_router import router as cancellation_templates_router
 from app.modules.cancellations.router import router as cancellations_router
+from app.modules.issues.router import router as issues_router
 from app.modules.hosts.admin_router import router as admin_hosts_router
 from app.modules.hosts.router import router as host_router
 from app.modules.legal.router import router as legal_router
@@ -26,6 +27,7 @@ from app.modules.places.router import router as places_router
 from app.modules.pricing.admin_router import router as admin_tax_router
 from app.modules.properties.admin_router import router as admin_listings_router
 from app.modules.properties.router import router as listings_router
+from app.modules.reviews.router import router as reviews_router
 from app.modules.search.router import router as search_router
 from app.modules.users.admin_router import router as admin_users_router
 from app.modules.users.router import router as me_router
@@ -37,7 +39,7 @@ if settings.is_production and not settings.turnstile_secret_key:
 
 app = FastAPI(
     title="NearBNB API",
-    version="0.8.0",
+    version="0.9.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
@@ -76,6 +78,8 @@ api.include_router(search_router)
 api.include_router(places_router)
 api.include_router(admin_tax_router)
 api.include_router(bookings_router)
+api.include_router(reviews_router)
+api.include_router(issues_router)
 api.include_router(dashboards_router)
 api.include_router(admin_users_router, dependencies=[Depends(require_admin)])
 api.include_router(cancellations_router)

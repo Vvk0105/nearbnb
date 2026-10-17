@@ -884,6 +884,9 @@ async def public_property(session: AsyncSession, property_id: uuid.UUID) -> dict
         }
     owner = await session.get(User, host.user_id)
     data["host_first_name"] = owner.full_name.split()[0]
+    from app.modules.reviews import service as review_service  # local import: reviews imports the bookings module
+
+    data["rating"] = (await review_service.property_ratings(session, [prop.id])).get(prop.id)
     policy = await cancellation_service.effective_template(session, prop.cancellation_template_key)
     data["cancellation"] = {"key": policy.key, "name": policy.name, "description": policy.description, "tiers": policy.tiers}
     # The exact address is only revealed to a guest after a confirmed booking.

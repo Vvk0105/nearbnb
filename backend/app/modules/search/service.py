@@ -134,6 +134,9 @@ async def search(
         for m in media:
             covers.setdefault(m.owner_id, m)
     type_names = {t.id: t.name for t in (await session.execute(select(PropertyType))).scalars()}
+    from app.modules.reviews import service as review_service
+
+    ratings = await review_service.property_ratings(session, prop_ids)
 
     items = []
     for pid, entry in grouped.items():
@@ -143,7 +146,7 @@ async def search(
             "id": str(pid), "name": prop.name, "type_name": type_names.get(prop.type_id), "suburb": prop.suburb, "state": prop.state,
             "cover_url": f"/api/v1/media/{cover.path}" if cover else None, "thumb_url": f"/api/v1/media/{cover.thumb_path}" if cover else None,
             "currency": units[0].currency, "min_price": min(u.price_per_24h for u in units),
-            "distance_km": round(entry["distance"], 1) if entry["distance"] is not None else None,
+            "distance_km": round(entry["distance"], 1) if entry["distance"] is not None else None, "rating": ratings.get(pid),
             "units": [{"id": str(u.id), "name": u.name, "price_per_24h": u.price_per_24h, "capacity": u.capacity} for u in units],
         })
     if sort in ("price_asc", "price_desc"):

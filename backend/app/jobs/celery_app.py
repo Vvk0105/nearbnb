@@ -19,6 +19,7 @@ celery_app.conf.update(
         "reconcile-payments": {"task": "payments.reconcile", "schedule": 60.0},
         "release-payouts": {"task": "payouts.release", "schedule": 600.0},
         "advance-bookings": {"task": "bookings.advance", "schedule": 60.0},
+        "process-reviews": {"task": "reviews.process", "schedule": 900.0},
         "cleanup-auth-data": {"task": "auth.cleanup", "schedule": 86400.0},
     },
 )

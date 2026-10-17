@@ -66,6 +66,11 @@ class Booking(UUIDPrimaryKey, Base):
     closed_reason: Mapped[str | None] = mapped_column(Text)  # host's reason when rejecting, or why it ended
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     payment_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checkin_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checkout_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # set when the stay completes
+    review_invite_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     cancelled_by_role: Mapped[str | None] = mapped_column(String(10))  # guest | host | admin
     payout_hold: Mapped[bool] = mapped_column(Boolean, default=False)  # an admin has stopped the host payout
