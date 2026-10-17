@@ -233,8 +233,13 @@ async def edit_property(session: AsyncSession, host: HostProfile, prop: Property
     require_not_suspended(host)
     mode = _status_gate(prop.status)
     changes = await _validate_property_values(session, changes)
+    # Forms send every field on save. Only fields whose value really changed count as an edit,
+    # otherwise an untouched description would be sent to admin review.
+    changes = {k: v for k, v in changes.items() if getattr(prop, k) != v}
     if ("state" in changes or "country" in changes) and "timezone" not in changes:
-        changes["timezone"] = default_timezone(changes.get("country", prop.country), changes.get("state", prop.state))
+        derived = default_timezone(changes.get("country", prop.country), changes.get("state", prop.state))
+        if derived != prop.timezone:
+            changes["timezone"] = derived
     if not changes:
         return {"applied": [], "pending_review": []}
     if mode == "direct":
@@ -361,6 +366,15 @@ async def edit_unit(session: AsyncSession, host: HostProfile, unit: Unit, change
     changes = await _validate_unit_values(session, changes)
     if "checkin_from" in changes or "checkin_to" in changes:
         _check_window(unit, changes)
+    # Only fields whose value really changed count as an edit (see edit_property).
+    unchanged = set()
+    for key, value in changes.items():
+        if key == "amenity_ids":
+            if {a.id for a in unit.amenities} == set(value):
+                unchanged.update({"amenity_ids", "_amenities"})
+        elif key != "_amenities" and getattr(unit, key) == value:
+            unchanged.add(key)
+    changes = {k: v for k, v in changes.items() if k not in unchanged}
     if not changes:
         return {"applied": [], "pending_review": []}
     if mode == "direct":

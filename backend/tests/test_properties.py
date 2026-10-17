@@ -129,6 +129,40 @@ async def test_sensitive_edits_go_to_review_and_the_live_version_stays(new_clien
     assert (await admin.get(f"{API}/admin/revisions")).json() == []
 
 
+async def test_saving_without_changing_anything_does_not_trigger_review(new_client, make_admin):
+    """The editor sends every field on save; untouched fields must not count as edits."""
+    admin, host, _ = await setup_world(new_client, make_admin)
+    h = csrf_headers(host)
+    prop = await live_listing(host, admin)
+    unit = prop["units"][0]
+
+    same = {"name": prop["name"], "description": prop["description"], "rules": prop["rules"], "type_id": prop["type_id"],
+            "address_line1": prop["address_line1"], "suburb": prop["suburb"], "state": prop["state"], "postcode": prop["postcode"],
+            "country": prop["country"], "timezone": prop["timezone"]}
+    r = await host.patch(f"{API}/host/properties/{prop['id']}", json=same, headers=h)
+    assert r.json()["result"] == {"applied": [], "pending_review": []}
+    assert r.json()["pending_revisions"] == []
+
+    # change only the rules (not sensitive) while re-sending the unchanged sensitive description
+    r = await host.patch(f"{API}/host/properties/{prop['id']}", json={**same, "rules": "No smoking"}, headers=h)
+    assert r.json()["result"] == {"applied": ["rules"], "pending_review": []}
+
+    unit_same = {"name": unit["name"], "description": unit["description"], "price_per_24h": unit["price_per_24h"],
+                 "cleaning_fee": unit["cleaning_fee"], "capacity": unit["capacity"], "quantity": unit["quantity"],
+                 "checkin_from": unit["checkin_from"], "checkin_to": unit["checkin_to"],
+                 "amenity_ids": [a["id"] for a in unit["amenities"]]}
+    await admin.put(f"{API}/admin/settings/listing.reapproval_fields",
+                    json={"value": ["address", "property_type", "photos", "description", "price", "capacity", "amenities"]},
+                    headers=csrf_headers(admin))
+    r = await host.patch(f"{API}/host/units/{unit['id']}", json=unit_same, headers=h)
+    assert r.json()["result"] == {"applied": [], "pending_review": []}
+    assert (await admin.get(f"{API}/admin/revisions")).json() == []
+
+    # a real change among the same fields is still queued
+    r = await host.patch(f"{API}/host/units/{unit['id']}", json={**unit_same, "price_per_24h": 40000}, headers=h)
+    assert r.json()["result"]["pending_review"] == ["price_per_24h"]
+
+
 async def test_rejected_revision_changes_nothing(new_client, make_admin):
     admin, host, _ = await setup_world(new_client, make_admin)
     prop = await live_listing(host, admin)
