@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, mediaUrl } from "../../lib/api";
 import { money } from "../../lib/format";
@@ -73,11 +74,21 @@ export function TripDetailPage() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [params] = useSearchParams();
   const { data: b, error, isLoading, refetch } = useQuery({
     queryKey: ["bookings", "guest", "one", bookingId],
     queryFn: () => api<BookingItem>(`/me/bookings/${bookingId}`),
     retry: false,
+    // While a payment is going through, keep checking: the webhook (or our own check with Stripe) confirms it within seconds.
+    refetchInterval: (q) => (q.state.data?.status === "payment_pending" && params.get("paid") ? 3000 : false),
   });
+
+  // Back from the payment form: ask the server to read the payment from Stripe right away instead of waiting for the webhook.
+  const returned = Boolean(params.get("paid")) || params.has("payment_intent");
+  useEffect(() => {
+    if (!returned || !bookingId) return;
+    api(`/me/bookings/${bookingId}/pay/sync`, { method: "POST" }).then(() => refetch()).catch(() => undefined);
+  }, [returned, bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) return <p className="text-gray-500">Loading...</p>;
   if (error || !b) {
@@ -123,8 +134,18 @@ export function TripDetailPage() {
         <Alert kind="success">
           {b.host?.first_name ?? "The host"} accepted your request. Pay before the time runs out to keep the dates.
           <Countdown target={b.payment_deadline_at} seconds={b.seconds_to_pay} label="Pay within" onDone={() => void refetch()} />
-          <span className="mt-1 block text-xs">Online payment is being added in the next update.</span>
         </Alert>
+      )}
+      {b.status === "payment_pending" && (
+        <Alert kind="info">
+          {returned ? "Checking your payment with Stripe..." : "Your payment has been started but is not finished."}
+          <Countdown target={b.payment_deadline_at} seconds={b.seconds_to_pay} label="Pay within" onDone={() => void refetch()} />
+        </Alert>
+      )}
+      {b.payment?.status === "failed" && b.payment.failure_message && b.can_pay && <Alert>Your last payment did not go through: {b.payment.failure_message} You can try another card.</Alert>}
+      {b.status === "confirmed" && <Alert kind="success">Payment received. Your stay is confirmed. A confirmation email is on its way.</Alert>}
+      {b.can_pay && (
+        <Link to={`/account/trips/${b.id}/pay`}><Button>{b.status === "payment_pending" ? "Continue to payment" : "Pay now"} · {money(b.price.total ?? 0, b.currency)}</Button></Link>
       )}
       {b.status === "rejected" && <Alert>The host declined this request.{b.closed_reason ? ` Their message: "${b.closed_reason}"` : ""} You were not charged.</Alert>}
       {b.status === "expired" && <Alert>The host did not reply in time, so this request expired. You were not charged.</Alert>}
@@ -145,6 +166,9 @@ export function TripDetailPage() {
         <PriceBreakdownView quote={{ price: b.price as PriceBreakdown, currency: b.currency } as Quote} />
       </Card>
 
+      {b.invoice_number && (
+        <Card title="Receipt"><p className="text-sm">Invoice {b.invoice_number}. <Link to={`/account/trips/${b.id}/invoice`} className="font-medium text-brand-700 underline">View receipt and tax invoice</Link></p></Card>
+      )}
       {b.checkin_instructions && (
         <Card title="Check-in instructions"><p className="whitespace-pre-wrap text-sm">{b.checkin_instructions}</p></Card>
       )}

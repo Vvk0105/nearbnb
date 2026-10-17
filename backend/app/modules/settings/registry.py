@@ -131,6 +131,13 @@ _DEFS: list[SettingDef] = [
     SettingDef("host.supported_countries", "Hosts", "Countries hosts can be in", "str_list", ["AU"],
                "Two-letter country codes. Host payouts only work for countries your Stripe account can pay out to "
                "(with separate charges and transfers, hosts must be in the same country as the platform's Stripe account)."),
+    # Invoices (printed on every receipt / tax invoice; confirm the wording with your accountant)
+    SettingDef("invoice.seller_name", "Invoices", "Seller name on invoices", "str", "NearBnB",
+               "Legal name of the business issuing the invoice."),
+    SettingDef("invoice.seller_tax_id", "Invoices", "Seller tax number (ABN)", "str", "ABN to be configured",
+               "Tax registration number printed on tax invoices."),
+    SettingDef("invoice.seller_address", "Invoices", "Seller address on invoices", "str", "Address to be configured"),
+    SettingDef("invoice.footer_note", "Invoices", "Invoice footer", "str", "Thank you for booking with NearBnB."),
     # Calendar sync
     SettingDef("ical.poll_minutes", "Calendar sync", "iCal import interval", "int", 15, min=5, max=240, unit="min"),
 ]

@@ -11,10 +11,13 @@ from app.core.db import get_session
 from app.core.errors import AppError
 from app.modules.hosts import service as host_service
 from app.modules.notifications.service import kick_outbox
+from app.modules.payments import service as payment_service
 from app.modules.payments.models import StripeEvent
+from app.modules.payments.stripe_gateway import intent_from_stripe
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+PAYMENT_EVENTS = ("payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.processing", "payment_intent.canceled")
 
 
 @router.post("/stripe")
@@ -53,6 +56,8 @@ async def stripe_webhook(request: Request, session: AsyncSession = Depends(get_s
     try:
         if event_dict["type"] == "account.updated":
             await host_service.handle_account_updated(session, event_dict["data"]["object"])
+        elif event_dict["type"] in PAYMENT_EVENTS:
+            await payment_service.apply_intent(session, intent_from_stripe(event_dict["data"]["object"]))
         row.processed_at = datetime.now(UTC)
     except Exception as exc:  # noqa: BLE001
         log.exception("stripe webhook handling failed: %s", event_dict.get("id"))

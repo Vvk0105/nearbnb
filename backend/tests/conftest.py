@@ -68,6 +68,7 @@ async def _clean_tables():
     async with engine.begin() as c:
         names = ", ".join(t.name for t in Base.metadata.sorted_tables)
         await c.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+        await c.execute(text("ALTER SEQUENCE invoice_number_seq RESTART WITH 1"))  # a free-standing sequence is not reset by TRUNCATE
     async with SessionLocal() as session:
         await legal_service.seed_placeholders(session)
         await seed_catalogues(session)

@@ -6,6 +6,8 @@ import SearchPage from "./pages/Search";
 import LegalPage from "./pages/Legal";
 import AccountPage from "./pages/account/Account";
 import { TripDetailPage, TripsPage } from "./pages/account/Trips";
+import { PayPage } from "./pages/account/Pay";
+import { InvoicePage } from "./pages/account/Invoice";
 import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
@@ -34,6 +36,8 @@ export default function App() {
           <Route path="account" element={<AccountPage />} />
           <Route path="account/trips" element={<TripsPage />} />
           <Route path="account/trips/:bookingId" element={<TripDetailPage />} />
+          <Route path="account/trips/:bookingId/pay" element={<PayPage />} />
+          <Route path="account/trips/:bookingId/invoice" element={<InvoicePage />} />
           <Route path="host" element={<HostHome />} />
           <Route path="host/apply" element={<ApplyPage />} />
           <Route path="host/payouts" element={<PayoutsPage />} />

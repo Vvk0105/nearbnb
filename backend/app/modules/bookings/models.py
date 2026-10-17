@@ -70,3 +70,16 @@ class Booking(UUIDPrimaryKey, Base):
     guest_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
     pricing_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
     policy_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+class BookingEvent(UUIDPrimaryKey, Base):
+    """Every status change of a booking: who, when, from what to what. Written by `transition` only."""
+
+    __tablename__ = "booking_events"
+
+    booking_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bookings.id", ondelete="CASCADE"), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(20))
+    to_status: Mapped[str] = mapped_column(String(20))
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    note: Mapped[str | None] = mapped_column(Text)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

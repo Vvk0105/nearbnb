@@ -97,4 +97,40 @@ BOOKING_TEMPLATES: dict[str, tuple[str, str, str]] = {
         "Hi {{ name }},\n\n{{ guest_name }} did not pay in time, so the dates were released." + _DETAILS_TEXT,
         "<p>Hi {{ name }},</p><p><strong>{{ guest_name }}</strong> did not pay in time, so the dates were released.</p>" + _DETAILS_HTML,
     ),
+    "payment_confirmed_guest": (
+        "Booking confirmed: {{ title }}",
+        "Hi {{ name }},\n\nYour payment of {{ total }} was received and your stay is confirmed." + _DETAILS_TEXT
+        + "\nYour host: {{ host_name }}{% if host_phone %} ({{ host_phone }}){% endif %}, {{ host_email }}\n"
+        "{% if checkin_instructions %}\nCheck-in instructions:\n{{ checkin_instructions }}\n{% endif %}"
+        "\nYour receipt and tax invoice: {{ url }}/account/trips/{{ booking_id }}/invoice\n",
+        "<p>Hi {{ name }},</p><p>Your payment of <strong>{{ total }}</strong> was received and your stay is confirmed.</p>" + _DETAILS_HTML
+        + "<p>Your host: <strong>{{ host_name }}</strong>{% if host_phone %} ({{ host_phone }}){% endif %}, {{ host_email }}</p>"
+        "{% if checkin_instructions %}<p><strong>Check-in instructions</strong><br>{{ checkin_instructions }}</p>{% endif %}"
+        + _button("View receipt and tax invoice", "/account/trips/{{ booking_id }}/invoice"),
+    ),
+    "booking_confirmed_host": (
+        "Booking confirmed: {{ title }}",
+        "Hi {{ name }},\n\n{{ guest_name }} has paid and the booking is confirmed." + _DETAILS_TEXT
+        + "Guest contact: {{ guest_email }}{% if guest_phone %}, {{ guest_phone }}{% endif %}\n"
+        "You will receive {{ host_payable }} after the stay, once the payout delay has passed.\n\n{{ url }}/host/requests\n",
+        "<p>Hi {{ name }},</p><p><strong>{{ guest_name }}</strong> has paid and the booking is confirmed.</p>" + _DETAILS_HTML
+        + "<p>Guest contact: {{ guest_email }}{% if guest_phone %}, {{ guest_phone }}{% endif %}</p>"
+        "<p>You will receive <strong>{{ host_payable }}</strong> after the stay, once the payout delay has passed.</p>"
+        + _button("Open my bookings", "/host/requests"),
+    ),
+    "payment_failed_guest": (
+        "Your payment did not go through: {{ title }}",
+        "Hi {{ name }},\n\nYour card payment was not successful." + _DETAILS_TEXT
+        + "\nYou can try again with another card until {{ pay_by }}: {{ url }}/account/trips/{{ booking_id }}/pay\n",
+        "<p>Hi {{ name }},</p><p>Your card payment was not successful.</p>" + _DETAILS_HTML
+        + "<p>You can try again with another card until <strong>{{ pay_by }}</strong>.</p>"
+        + _button("Try again", "/account/trips/{{ booking_id }}/pay"),
+    ),
+    "payment_late_refund_guest": (
+        "Your payment was refunded: {{ title }}",
+        "Hi {{ name }},\n\nYour payment arrived after the dates had been released, so we refunded it in full ({{ total }})." + _DETAILS_TEXT
+        + "\nThe refund can take 5 to 10 days to appear on your statement.\n",
+        "<p>Hi {{ name }},</p><p>Your payment arrived after the dates had been released, so we refunded it in full (<strong>{{ total }}</strong>).</p>"
+        + _DETAILS_HTML + "<p>The refund can take 5 to 10 days to appear on your statement.</p>",
+    ),
 }

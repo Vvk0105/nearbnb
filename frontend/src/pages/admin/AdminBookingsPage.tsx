@@ -29,7 +29,7 @@ export function AdminBookingsPage() {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase text-gray-500">
-            <tr><th className="py-2 pr-3">Ref</th><th className="pr-3">Place</th><th className="pr-3">Guest</th><th className="pr-3">Host</th><th className="pr-3">Stay</th><th className="pr-3">Total</th><th>Status</th></tr>
+            <tr><th className="py-2 pr-3">Ref</th><th className="pr-3">Place</th><th className="pr-3">Guest</th><th className="pr-3">Host</th><th className="pr-3">Stay</th><th className="pr-3">Total</th><th className="pr-3">Payment</th><th>Status</th></tr>
           </thead>
           <tbody>
             {(data?.items as AdminBooking[] | undefined)?.map((b) => (
@@ -40,6 +40,7 @@ export function AdminBookingsPage() {
                 <td className="pr-3">{b.host?.name}<br /><span className="text-xs text-gray-500">{b.host?.email}</span></td>
                 <td className="pr-3 whitespace-nowrap">{b.check_in_label}<br />→ {b.check_out_label}</td>
                 <td className="pr-3">{money(b.price.total ?? 0, b.currency)}</td>
+                <td className="pr-3 text-xs">{b.payment ? <>{b.payment.status}{b.payment.failure_code ? ` (${b.payment.failure_code})` : ""}<br /><span className="font-mono text-gray-500">{b.payment.intent_id?.slice(0, 18)}</span></> : "none"}{b.invoice_number ? <><br />{b.invoice_number}</> : null}</td>
                 <td><BookingBadge status={b.status} as="host" /></td>
               </tr>
             ))}

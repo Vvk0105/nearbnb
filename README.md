@@ -110,6 +110,23 @@ Hosts are created as **Accounts v2** (`POST /v2/core/accounts`): the `recipient`
 - **Admin:** read-only **Admin > Bookings** list with status filter.
 - **Not yet:** paying (Phase 5). An accepted request currently waits for payment that cannot be made, and expires after the payment window. To test acceptance comfortably, raise "Guest payment deadline" in Admin > Settings.
 
+## What exists after Phase 5
+
+- **Paying:** once a host accepts, the guest sees **Pay now** on the trip. The pay page shows the price and Stripe's card form (the Payment Element), so card details go straight to Stripe and never touch our server. The amount charged is always the total stored on the booking, never a number from the browser.
+- **Confirmation comes from Stripe, not the browser:** a booking is confirmed only when Stripe reports the payment succeeded, by webhook (`payment_intent.succeeded`) or because our server asked Stripe directly (when the guest returns from the pay page, and every minute for any payment still open). Confirming turns the held room into a confirmed booking in the same row, so there is no moment when someone else could take it.
+- **Safe to repeat:** a replayed webhook, a webhook plus a server check at the same instant, or a late "failed" message after a success change nothing the second time (one invoice, one set of emails).
+- **Failures:** a declined card shows Stripe's reason and the guest can try another card until the payment deadline (same payment, no double charge). Unpaid payments are cancelled when the window closes or the guest withdraws.
+- **Too late:** money that arrives for dates we no longer hold (or for the wrong amount) is refunded in full automatically and the guest is emailed. If that refund itself fails it is recorded for an admin (Admin > Bookings shows the payment state).
+- **After payment:** the guest sees the host's contact details and check-in instructions and gets a confirmation email; the host gets the guest's contact details. A numbered **receipt and tax invoice** (INV-000001...) is issued as a frozen copy; open it from the trip and use Print or save as PDF. Seller name, tax number (ABN), address and footer are set in Admin > Settings > Invoices (placeholders until you set them; confirm the wording with your accountant).
+- **Money model:** the platform charges the guest (separate charges and transfers, with the booking reference as the transfer group). The host's share is transferred in Phase 6 after check-in plus the payout delay.
+- **Audit trail:** every booking status change is recorded with who and when (`booking_events`).
+
+### Payments setup
+
+1. `STRIPE_SECRET_KEY` (test mode) is already used for hosts. Add `STRIPE_PUBLISHABLE_KEY` (starts `pk_test_`, Stripe Dashboard > Developers > API keys; it is safe to expose) to `.env`, then `docker compose up -d --force-recreate api worker`.
+2. Webhooks: the destination that receives events from **your account** needs `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.processing` and `payment_intent.canceled` in addition to the connected-account `account.updated` you already have. Locally you can skip this: the server check after paying and the one-minute reconcile job confirm payments without a webhook (to test the webhook path itself use `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe`).
+3. Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 9995` declines for insufficient funds, any future expiry and any CVC. With no Stripe keys at all, the pay page offers a clearly labelled **Simulate paying** button instead.
+
 ## Production
 
 See [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md). Frontend goes to Vercel (`frontend/vercel.json`, `frontend/.env.example`); the API runs on the server behind Caddy (`Caddyfile`, `docker-compose.prod.yml`).

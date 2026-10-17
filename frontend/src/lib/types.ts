@@ -137,6 +137,8 @@ export type BookingItem = {
   check_in_local: string; check_out_local: string; check_in_label: string; check_out_label: string;
   requested_at: string | null; expires_at: string | null; payment_deadline_at: string | null;
   seconds_to_respond: number | null; seconds_to_pay: number | null; closed_reason: string | null; can_withdraw: boolean;
+  can_pay?: boolean; invoice_number?: string | null; confirmed_at?: string | null;
+  payment?: { status: string; failure_message: string | null; intent_id?: string; charge_id?: string | null; failure_code?: string | null };
   property: { id: string; name: string; suburb: string; state: string; cover_url: string | null };
   unit: { id: string; name: string }; room: string | null;
   // guest view
@@ -151,3 +153,15 @@ export type BookingItem = {
 };
 export type BookingList = { items: BookingItem[]; total: number; page: number; page_size: number; counts: Record<BookingGroup, number> };
 export type Readiness = { email_verified: boolean; ready: boolean; missing: { field: string; label: string }[] };
+
+// ---- payment (Phase 5) ----
+export type PayStart = { booking_id: string; client_secret: string | null; amount: number; currency: string; publishable_key: string | null; fake: boolean; seconds_to_pay: number | null };
+export type InvoiceData = {
+  number: string; issued_at: string; total: number; currency: string; footer: string;
+  seller: { name: string; tax_id: string; address: string };
+  buyer: { name: string; email: string };
+  stay: { reference: string; property: string; unit: string; address: string; check_in: string; check_out: string; timezone: string; hours: number; nights: number; guests: number };
+  lines: { description: string; amount: number }[];
+  tax: { name: string | null; rate_percent: number | null; amount: number; inclusive: boolean };
+  payment: { reference: string; paid_at: string };
+};

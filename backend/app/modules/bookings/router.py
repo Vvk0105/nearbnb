@@ -11,6 +11,7 @@ from app.core.ratelimit import client_ip, rate_limit
 from app.modules.bookings import service
 from app.modules.hosts import service as host_service
 from app.modules.notifications.service import kick_outbox
+from app.modules.payments import service as payments
 from app.modules.users.models import User
 
 router = APIRouter(tags=["bookings"])
@@ -74,6 +75,39 @@ async def withdraw(booking_id: str, request: Request, user: User = Depends(get_c
     await session.commit()
     kick_outbox()
     return (await service.serialize(session, [booking], "guest"))[0]
+
+
+# ---------- paying ----------
+
+@router.post("/me/bookings/{booking_id}/pay", dependencies=[Depends(rate_limit("pay", 30, 3600))])
+async def start_payment(booking_id: str, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    """Creates or reuses the payment for an accepted booking and returns what the card form needs."""
+    result = await payments.start_payment(session, user, booking_id)
+    await session.commit()
+    return result
+
+
+@router.post("/me/bookings/{booking_id}/pay/sync", dependencies=[Depends(rate_limit("pay_sync", 60, 3600))])
+async def sync_payment(booking_id: str, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    """Reads the payment's state from Stripe (not from the browser) and applies it. Safe to call as often as needed."""
+    outcome = await payments.sync_payment(session, user, booking_id)
+    await session.commit()
+    kick_outbox()
+    return {"outcome": outcome, "booking": await service.get_for(session, booking_id, guest_id=user.id, viewer="guest")}
+
+
+@router.post("/me/bookings/{booking_id}/pay/dev-complete")
+async def dev_complete_payment(booking_id: str, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    """Development only (fake Stripe gateway): behaves as if Stripe reported the payment succeeded."""
+    outcome = await payments.dev_complete(session, user, booking_id)
+    await session.commit()
+    kick_outbox()
+    return {"outcome": outcome, "booking": await service.get_for(session, booking_id, guest_id=user.id, viewer="guest")}
+
+
+@router.get("/me/bookings/{booking_id}/invoice")
+async def my_invoice(booking_id: str, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    return await payments.get_invoice(session, user, booking_id)
 
 
 # ---------- host ----------

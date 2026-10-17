@@ -4,6 +4,7 @@ A request holds ONE room for the exact period (a `hold` row in room_occupancy). 
 constraint is the final judge of double booking; everything here only decides who gets there first.
 Expired holds are deleted by `expire_due`, which runs every minute and also before any new request, because
 the constraint cannot tell that a hold has run out."""
+import asyncio
 import logging
 import secrets
 import uuid
@@ -22,11 +23,13 @@ from app.modules.audit import service as audit
 from app.modules.availability import service as availability
 from app.modules.bookings.models import (
     B_ACCEPTED, B_CANCELLED, B_CHECKED_IN, B_COMPLETED, B_CONFIRMED, B_EXPIRED, B_PAYMENT_EXPIRED, B_PAYMENT_PENDING,
-    B_REJECTED, B_REQUESTED, B_WITHDRAWN, CONFIRMED_STATES, HOLDING, Booking,
+    B_REJECTED, B_REQUESTED, B_WITHDRAWN, CONFIRMED_STATES, HOLDING, Booking, BookingEvent,
 )
 from app.modules.hosts import service as host_service
 from app.modules.hosts.models import HostProfile
 from app.modules.notifications.service import enqueue_email
+from app.modules.payments.models import PAY_CANCELLED, PAY_CREATED, PAY_FAILED, PAY_PROCESSING, Invoice, Payment
+from app.modules.payments.stripe_gateway import get_gateway
 from app.modules.pricing import service as pricing
 from app.modules.properties.models import Media, Property, Room, RoomOccupancy, Unit
 from app.modules.properties.service import PUBLIC_MEDIA
@@ -47,6 +50,24 @@ FIELD_LABELS = {"full_name": "your full name", "dob": "your date of birth", "pho
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+# Every status change goes through `transition`, which refuses anything not listed here and writes a booking event.
+ALLOWED: dict[str, set[str]] = {
+    B_REQUESTED: {B_ACCEPTED, B_REJECTED, B_EXPIRED, B_WITHDRAWN},
+    B_ACCEPTED: {B_PAYMENT_PENDING, B_CONFIRMED, B_WITHDRAWN, B_PAYMENT_EXPIRED},
+    B_PAYMENT_PENDING: {B_ACCEPTED, B_CONFIRMED, B_PAYMENT_EXPIRED},
+    B_CONFIRMED: {B_CHECKED_IN, B_COMPLETED, B_CANCELLED},
+    B_CHECKED_IN: {B_COMPLETED, B_CANCELLED},
+}
+
+
+def transition(session: AsyncSession, b: Booking, to: str, *, actor_id: uuid.UUID | None = None, note: str | None = None) -> None:
+    """Moves a booking to a new status, records who did it, and refuses impossible moves."""
+    if to not in ALLOWED.get(b.status, set()):
+        raise AppError(409, "INVALID_STATE", f"A booking that is {b.status.replace('_', ' ')} cannot become {to.replace('_', ' ')}.")
+    session.add(BookingEvent(booking_id=b.id, from_status=b.status, to_status=to, actor_id=actor_id, note=note))
+    b.status = to
 
 
 def money(cents: int, currency: str) -> str:
@@ -94,7 +115,13 @@ async def _context(session: AsyncSession, b: Booking) -> dict:
     unit = await session.get(Unit, b.unit_id)
     tz = ZoneInfo(b.timezone)
     p = b.pricing_snapshot
+    host = await session.get(HostProfile, b.host_id)
+    host_user = await session.get(User, host.user_id)
+    g = b.guest_snapshot
     return {
+        "booking_id": str(b.id), "host_name": host_user.full_name, "host_email": host_user.email,
+        "host_phone": (host.application_data or {}).get("phone", ""), "checkin_instructions": prop.checkin_instructions or "",
+        "guest_email": g.get("email", ""), "guest_phone": g.get("phone") or "",
         "reference": b.reference, "title": f"{prop.name} ({unit.name})", "guest_name": b.guest_snapshot.get("full_name", "A guest"),
         "checkin": availability.fmt_local(b.check_in, tz), "checkout": availability.fmt_local(b.check_out, tz), "tz": b.timezone,
         "guests": b.guests, "nights": p.get("nights"), "total": money(p["total"], b.currency),
@@ -119,6 +146,18 @@ async def _release_hold(session: AsyncSession, booking_id: uuid.UUID) -> None:
     await session.execute(delete(RoomOccupancy).where(RoomOccupancy.booking_id == booking_id, RoomOccupancy.kind == "hold"))
 
 
+async def _cancel_open_payments(session: AsyncSession, b: Booking) -> None:
+    """The payment window closed: cancel any unpaid PaymentIntent so the guest cannot pay for dates we have released.
+    One already processing cannot be cancelled; if it later succeeds the late-payment path refunds it."""
+    payments = (await session.execute(select(Payment).where(Payment.booking_id == b.id, Payment.status.in_((PAY_CREATED, PAY_PROCESSING, PAY_FAILED))))).scalars().all()
+    for payment in payments:
+        cancelled = True
+        if not payment.stripe_payment_intent_id.startswith("pi_fake_"):
+            cancelled = await asyncio.to_thread(get_gateway().cancel_payment_intent, payment.stripe_payment_intent_id)
+        if cancelled:
+            payment.status = PAY_CANCELLED
+
+
 async def expire_due(session: AsyncSession, now: datetime | None = None, limit: int = 200) -> int:
     """Closes requests the host did not answer and acceptances the guest did not pay, and frees their rooms.
     Safe to call at any time and from several places at once (rows another call is handling are skipped)."""
@@ -131,10 +170,13 @@ async def expire_due(session: AsyncSession, now: datetime | None = None, limit: 
     )).scalars().all()
     for b in rows:
         if b.status == B_REQUESTED:
-            b.status, b.closed_reason = B_EXPIRED, "The host did not respond in time."
+            b.closed_reason = "The host did not respond in time."
+            transition(session, b, B_EXPIRED, note=b.closed_reason)
             template_guest, template_host = "booking_expired_guest", "booking_expired_host"
         else:
-            b.status, b.closed_reason = B_PAYMENT_EXPIRED, "Payment was not completed in time."
+            b.closed_reason = "Payment was not completed in time."
+            await _cancel_open_payments(session, b)
+            transition(session, b, B_PAYMENT_EXPIRED, note=b.closed_reason)
             template_guest, template_host = "booking_payment_expired_guest", "booking_payment_expired_host"
         b.cancelled_at = now
         await _release_hold(session, b.id)
@@ -155,7 +197,7 @@ async def send_reminders(session: AsyncSession, now: datetime | None = None) -> 
             b.reminder_sent_at = now
             await _notify(session, b, "host", "booking_reminder_host")
             sent += 1
-    for b in (await session.execute(select(Booking).where(Booking.status == B_ACCEPTED, Booking.payment_reminder_sent_at.is_(None), Booking.payment_deadline_at > now))).scalars():
+    for b in (await session.execute(select(Booking).where(Booking.status.in_((B_ACCEPTED, B_PAYMENT_PENDING)), Booking.payment_reminder_sent_at.is_(None), Booking.payment_deadline_at > now))).scalars():
         if now >= b.accepted_at + (b.payment_deadline_at - b.accepted_at) / 2:
             b.payment_reminder_sent_at = now
             await _notify(session, b, "guest", "booking_payment_reminder_guest")
@@ -287,7 +329,8 @@ async def accept(session: AsyncSession, host: HostProfile, actor: User, booking_
     if hold is None or b.check_in <= now:  # expire_due above normally catches this; this is the last safety net
         raise AppError(409, "REQUEST_EXPIRED", "This request expired.")
     deadline = min(now + timedelta(minutes=b.policy_snapshot["payment_minutes"]), b.check_in)
-    b.status, b.accepted_at, b.responded_at, b.payment_deadline_at = B_ACCEPTED, now, now, deadline
+    transition(session, b, B_ACCEPTED, actor_id=actor.id)
+    b.accepted_at, b.responded_at, b.payment_deadline_at = now, now, deadline
     hold.expires_at = deadline
     audit.record(session, action="booking.accepted", entity_type="booking", entity_id=b.id, actor_id=actor.id, ip=ip, after={"payment_deadline_at": deadline.isoformat()})
     await _notify(session, b, "guest", "booking_accepted_guest")
@@ -302,7 +345,8 @@ async def reject(session: AsyncSession, host: HostProfile, actor: User, booking_
     if b.status != B_REQUESTED:
         raise _not_open(b)
     now = _now()
-    b.status, b.responded_at, b.closed_reason = B_REJECTED, now, (note or "").strip() or None
+    b.responded_at, b.closed_reason = now, (note or "").strip() or None
+    transition(session, b, B_REJECTED, actor_id=actor.id, note=b.closed_reason)
     await _release_hold(session, b.id)
     audit.record(session, action="booking.rejected", entity_type="booking", entity_id=b.id, actor_id=actor.id, ip=ip, reason=b.closed_reason)
     await _notify(session, b, "guest", "booking_rejected_guest")
@@ -316,7 +360,9 @@ async def withdraw(session: AsyncSession, guest: User, booking_id: str, ip: str 
         raise AppError(404, "NOT_FOUND", "Booking not found.")
     if b.status not in (B_REQUESTED, B_ACCEPTED):
         raise _not_open(b)
-    b.status, b.cancelled_at, b.cancelled_by = B_WITHDRAWN, _now(), guest.id
+    b.cancelled_at, b.cancelled_by = _now(), guest.id
+    await _cancel_open_payments(session, b)
+    transition(session, b, B_WITHDRAWN, actor_id=guest.id)
     await _release_hold(session, b.id)
     audit.record(session, action="booking.withdrawn", entity_type="booking", entity_id=b.id, actor_id=guest.id, ip=ip)
     await _notify(session, b, "host", "booking_withdrawn_host")
@@ -350,6 +396,10 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
     units = {u.id: u for u in (await session.execute(select(Unit).where(Unit.id.in_({b.unit_id for b in bookings})))).scalars()}
     rooms = {r.id: r for r in (await session.execute(select(Room).where(Room.id.in_({b.room_id for b in bookings})))).scalars()}
     covers = await _covers(session, set(props))
+    latest_payment: dict[uuid.UUID, Payment] = {}
+    for pay in (await session.execute(select(Payment).where(Payment.booking_id.in_({b.id for b in bookings})).order_by(Payment.created_at))).scalars():
+        latest_payment[pay.booking_id] = pay
+    invoices = {i.booking_id: i for i in (await session.execute(select(Invoice).where(Invoice.booking_id.in_({b.id for b in bookings})))).scalars()}
     host_users: dict[uuid.UUID, tuple[HostProfile, User]] = {}
     for h in (await session.execute(select(HostProfile).where(HostProfile.id.in_({b.host_id for b in bookings})))).scalars():
         host_users[h.id] = (h, await session.get(User, h.user_id))
@@ -366,13 +416,20 @@ async def serialize(session: AsyncSession, bookings: list[Booking], viewer: str)
             "expires_at": b.expires_at.isoformat() if b.expires_at else None,
             "payment_deadline_at": b.payment_deadline_at.isoformat() if b.payment_deadline_at else None,
             "seconds_to_respond": _seconds_left(b.expires_at, now) if b.status == B_REQUESTED else None,
-            "seconds_to_pay": _seconds_left(b.payment_deadline_at, now) if b.status == B_ACCEPTED else None,
+            "seconds_to_pay": _seconds_left(b.payment_deadline_at, now) if b.status in (B_ACCEPTED, B_PAYMENT_PENDING) else None,
             "closed_reason": b.closed_reason if b.status in (B_REJECTED, B_EXPIRED, B_PAYMENT_EXPIRED) else None,
             "property": {"id": str(prop.id), "name": prop.name, "suburb": prop.suburb, "state": prop.state, "cover_url": covers.get(prop.id)},
             "unit": {"id": str(unit.id), "name": unit.name},
             "room": rooms[b.room_id].label if viewer != "guest" else None,
             "can_withdraw": viewer == "guest" and b.status in (B_REQUESTED, B_ACCEPTED),
+            "can_pay": viewer == "guest" and b.status in (B_ACCEPTED, B_PAYMENT_PENDING) and bool(b.payment_deadline_at and b.payment_deadline_at > now),
+            "invoice_number": invoices[b.id].number if b.id in invoices else None,
+            "confirmed_at": b.confirmed_at.isoformat() if b.confirmed_at else None,
         }
+        pay = latest_payment.get(b.id)
+        if pay is not None:
+            item["payment"] = {"status": pay.status, "failure_message": pay.failure_message if pay.status == "failed" else None,
+                               **({"intent_id": pay.stripe_payment_intent_id, "charge_id": pay.stripe_charge_id, "failure_code": pay.failure_code} if viewer == "admin" else {})}
         if viewer == "guest":
             item["price"] = pricing.guest_view(p)
             item["host"] = {"first_name": host_user.full_name.split()[0] if host_user.full_name.strip() else "Your host"}

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     google_places_api_key: str = ""
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_publishable_key: str = ""  # safe to show in the browser (pk_test_... / pk_live_...)
 
     storage_root: str = "/data/storage"
 

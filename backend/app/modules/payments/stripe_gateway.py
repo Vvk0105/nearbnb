@@ -32,12 +32,31 @@ class AccountStatus:
         return self.details_submitted and self.payouts_enabled and self.transfers_active
 
 
+@dataclass
+class IntentInfo:
+    """What the platform needs to know about a PaymentIntent (from the API, a webhook payload, or the fake gateway)."""
+
+    id: str
+    status: str = "requires_payment_method"
+    client_secret: str | None = None
+    amount: int = 0
+    currency: str = ""
+    charge_id: str | None = None
+    failure_code: str | None = None
+    failure_message: str | None = None
+    metadata: dict = field(default_factory=dict)
+
+
 class StripeGateway(Protocol):
     is_fake: bool
 
     def create_account(self, *, email: str, country: str, host_id: str, display_name: str = "") -> str: ...
     def create_onboarding_link(self, account_id: str, refresh_url: str, return_url: str) -> str: ...
     def retrieve_account(self, account_id: str) -> AccountStatus: ...
+    def create_payment_intent(self, *, amount: int, currency: str, booking_id: str, reference: str, description: str, idempotency_key: str) -> IntentInfo: ...
+    def retrieve_payment_intent(self, intent_id: str) -> IntentInfo: ...
+    def cancel_payment_intent(self, intent_id: str) -> bool: ...
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str: ...
 
 
 def _readable(exc: Exception) -> AppError:
@@ -120,6 +139,81 @@ class RealStripeGateway:
             raise _readable(exc) from exc
 
 
+    # ---- payments: the platform charges the guest; the host's share is transferred later (Phase 6) ----
+
+    def create_payment_intent(self, *, amount: int, currency: str, booking_id: str, reference: str, description: str, idempotency_key: str) -> IntentInfo:
+        import stripe
+
+        try:
+            intent = self._client.v1.payment_intents.create(
+                params={
+                    "amount": amount,
+                    "currency": currency.lower(),
+                    "automatic_payment_methods": {"enabled": True},
+                    "transfer_group": reference,  # ties the later transfer to the host to this charge
+                    "description": description,
+                    "metadata": {"booking_id": booking_id, "reference": reference},
+                },
+                options={"idempotency_key": idempotency_key},
+            )
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+        return intent_from_stripe(intent)
+
+    def retrieve_payment_intent(self, intent_id: str) -> IntentInfo:
+        import stripe
+
+        try:
+            return intent_from_stripe(self._client.v1.payment_intents.retrieve(intent_id))
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+
+    def cancel_payment_intent(self, intent_id: str) -> bool:
+        """Best effort: a payment that is already processing or paid cannot be cancelled (False)."""
+        import stripe
+
+        try:
+            self._client.v1.payment_intents.cancel(intent_id)
+            return True
+        except stripe.StripeError:
+            log.warning("could not cancel payment intent %s", intent_id, exc_info=True)
+            return False
+
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str:
+        import stripe
+
+        try:
+            refund = self._client.v1.refunds.create(
+                params={"payment_intent": intent_id, "amount": amount, "reason": "requested_by_customer", "metadata": {"reason": reason[:400]}},
+                options={"idempotency_key": idempotency_key},
+            )
+        except stripe.StripeError as exc:
+            raise _readable_payment(exc) from exc
+        return refund.id
+
+
+def _readable_payment(exc: Exception) -> AppError:
+    log.exception("Stripe payment request failed")
+    detail = ""
+    if not get_settings().is_production:
+        detail = f" ({getattr(exc, 'user_message', None) or exc})"
+    return AppError(502, "STRIPE_ERROR", "We couldn't reach the payment provider right now. Please try again in a moment." + detail)
+
+
+def intent_from_stripe(obj) -> IntentInfo:
+    """Works for a PaymentIntent from the API and for the dict inside a webhook event."""
+    data = _plain(obj) or {}
+    charge = data.get("latest_charge")
+    error = data.get("last_payment_error") or {}
+    return IntentInfo(
+        id=data.get("id", ""), status=data.get("status", ""), client_secret=data.get("client_secret"),
+        amount=int(data.get("amount") or 0), currency=(data.get("currency") or "").upper(),
+        charge_id=charge.get("id") if isinstance(charge, dict) else charge,
+        failure_code=error.get("decline_code") or error.get("code"), failure_message=error.get("message"),
+        metadata=dict(data.get("metadata") or {}),
+    )
+
+
 def _plain(obj):
     """Stripe objects and plain dicts (webhook payloads) are read the same way."""
     return obj.to_dict() if hasattr(obj, "to_dict") else obj
@@ -184,6 +278,21 @@ class FakeStripeGateway:
         if account_id.endswith("_done"):
             return AccountStatus(True, True, True, [])
         return AccountStatus(False, False, False, ["external_account", "individual.verification.document"])
+
+    def create_payment_intent(self, *, amount: int, currency: str, booking_id: str, reference: str, description: str, idempotency_key: str) -> IntentInfo:
+        # Deterministic from the idempotency key, so asking twice gives the same intent, like Stripe does.
+        token = uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]
+        return IntentInfo(id=f"pi_fake_{token}", client_secret=f"pi_fake_{token}_secret_fake", amount=amount, currency=currency.upper(),
+                          metadata={"booking_id": booking_id, "reference": reference})
+
+    def retrieve_payment_intent(self, intent_id: str) -> IntentInfo:
+        return IntentInfo(id=intent_id, client_secret=f"{intent_id}_secret_fake")  # never paid: dev-complete simulates payment
+
+    def cancel_payment_intent(self, intent_id: str) -> bool:
+        return True
+
+    def refund_payment(self, *, intent_id: str, amount: int, reason: str, idempotency_key: str) -> str:
+        return f"re_fake_{uuid.uuid5(uuid.NAMESPACE_URL, idempotency_key).hex[:20]}"
 
 
 def get_gateway() -> StripeGateway:

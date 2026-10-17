@@ -4,7 +4,8 @@ from app.modules.auth.models import OtpCode, RefreshToken  # noqa: F401
 from app.modules.bookings.models import Booking  # noqa: F401
 from app.modules.hosts.models import HostDocument, HostProfile, HostSettingOverride  # noqa: F401
 from app.modules.legal.models import LegalDocument  # noqa: F401
-from app.modules.payments.models import StripeEvent  # noqa: F401
+from app.modules.payments.models import Invoice, Payment, Refund, StripeEvent  # noqa: F401
+from app.modules.bookings.models import BookingEvent  # noqa: F401
 from app.modules.pricing.models import TaxRule  # noqa: F401
 from app.modules.properties.models import (  # noqa: F401
     Amenity, ListingRevision, Media, Property, PropertyType, Room, RoomOccupancy, Unit, unit_amenities,

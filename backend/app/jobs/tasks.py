@@ -8,6 +8,7 @@ from app.jobs.celery_app import celery_app
 from app.modules.auth.models import OtpCode, RefreshToken
 from app.modules.bookings import service as booking_service
 from app.modules.notifications.service import kick_outbox, process_outbox
+from app.modules.payments import service as payment_service
 
 
 async def _send_pending() -> int:
@@ -47,3 +48,17 @@ async def _expire_bookings() -> dict[str, int]:
 @celery_app.task(name="bookings.expire_and_remind")
 def expire_and_remind_bookings() -> dict[str, int]:
     return asyncio.run(_expire_bookings())
+
+
+async def _reconcile_payments() -> int:
+    async with task_session() as session:
+        changed = await payment_service.reconcile_pending(session)
+        await session.commit()
+    if changed:
+        kick_outbox()
+    return changed
+
+
+@celery_app.task(name="payments.reconcile")
+def reconcile_payments() -> int:
+    return asyncio.run(_reconcile_payments())
