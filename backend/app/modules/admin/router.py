@@ -40,7 +40,7 @@ async def list_settings(session: AsyncSession = Depends(get_session)):
             {
                 "key": definition.key, "group": definition.group, "label": definition.label,
                 "description": definition.description, "type": definition.type, "unit": definition.unit,
-                "min": definition.min, "max": definition.max, "choices": list(definition.choices),
+                "min": definition.min, "max": definition.max, "choices": list(definition.choices), "host_override": definition.host_override,
                 "default": definition.default, "value": current.value, "source": current.source,
                 "version": current.version,
             }

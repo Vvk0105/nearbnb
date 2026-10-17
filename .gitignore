@@ -10,3 +10,6 @@ dist/
 storage/
 *.log
 .DS_Store
+
+# Celery beat runtime state
+celerybeat-schedule*

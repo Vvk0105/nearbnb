@@ -4,6 +4,10 @@ import Home from "./pages/Home";
 import LegalPage from "./pages/Legal";
 import AccountPage from "./pages/account/Account";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
+import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
+import { CataloguesPage, ListingDetailPage, ListingsPage } from "./pages/admin/AdminListingPages";
+import { ApplyPage, HostHome, PayoutsPage } from "./pages/host/HostPages";
+import { PropertiesPage, PropertyEditor, UnitEditor } from "./pages/host/PropertyPages";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from "./pages/auth/AuthPages";
 
 export default function App() {
@@ -20,12 +24,23 @@ export default function App() {
 
         <Route element={<RequireAuth />}>
           <Route path="account" element={<AccountPage />} />
+          <Route path="host" element={<HostHome />} />
+          <Route path="host/apply" element={<ApplyPage />} />
+          <Route path="host/payouts" element={<PayoutsPage />} />
+          <Route path="host/properties" element={<PropertiesPage />} />
+          <Route path="host/properties/:propertyId" element={<PropertyEditor />} />
+          <Route path="host/properties/:propertyId/units/:unitId" element={<UnitEditor />} />
         </Route>
 
         <Route element={<RequireAdmin />}>
           <Route path="admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="settings" replace />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="hosts" element={<HostsListPage />} />
+            <Route path="hosts/:hostId" element={<HostDetailPage />} />
+            <Route path="listings" element={<ListingsPage />} />
+            <Route path="listings/:propertyId" element={<ListingDetailPage />} />
+            <Route path="catalogues" element={<CataloguesPage />} />
             <Route path="legal" element={<LegalAdminPage />} />
             <Route path="audit" element={<AuditPage />} />
           </Route>

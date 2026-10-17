@@ -15,7 +15,7 @@ from app.core.security import verify_password
 from app.modules.audit import service as audit
 from app.modules.auth import service as auth_service
 from app.modules.legal import service as legal
-from app.modules.legal.models import CONSENT_REQUIRED_FOR_ALL
+from app.modules.legal.models import DOC_TYPES
 from app.modules.notifications.service import enqueue_email, kick_outbox
 from app.modules.users import service
 from app.modules.users.models import USER_DEACTIVATED, User, UserSocialLink
@@ -103,7 +103,7 @@ async def upload_photo(file: UploadFile = File(...), user: User = Depends(get_cu
 
 @router.post("/consents")
 async def accept_consent(body: ConsentIn, request: Request, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
-    if body.doc_type not in CONSENT_REQUIRED_FOR_ALL:
+    if body.doc_type not in DOC_TYPES:
         raise AppError(422, "UNKNOWN_DOCUMENT")
     await legal.record_consent(session, user.id, body.doc_type, client_ip(request))
     await session.commit()

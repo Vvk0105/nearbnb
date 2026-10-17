@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -10,15 +12,23 @@ from app.core.db import get_session
 from app.core.errors import AppError, app_error_handler
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
+from app.modules.hosts.admin_router import router as admin_hosts_router
+from app.modules.hosts.router import router as host_router
 from app.modules.legal.router import router as legal_router
 from app.modules.media.router import router as media_router
+from app.modules.payments.router import router as webhooks_router
+from app.modules.properties.admin_router import router as admin_listings_router
+from app.modules.properties.router import router as listings_router
 from app.modules.users.router import router as me_router
 
 settings = get_settings()
 
+if settings.is_production and not settings.turnstile_secret_key:
+    logging.getLogger(__name__).warning("TURNSTILE_SECRET_KEY is empty in production: CAPTCHA checks are DISABLED")
+
 app = FastAPI(
     title="NearBNB API",
-    version="0.2.0",
+    version="0.3.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
@@ -48,4 +58,9 @@ api.include_router(me_router)
 api.include_router(legal_router)
 api.include_router(media_router)
 api.include_router(admin_router)
+api.include_router(admin_hosts_router)
+api.include_router(admin_listings_router)
+api.include_router(host_router)
+api.include_router(listings_router)
+api.include_router(webhooks_router)
 app.include_router(api)

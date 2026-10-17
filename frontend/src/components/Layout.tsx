@@ -21,8 +21,13 @@ export function Layout() {
           </Link>
           <nav className="flex items-center gap-2">
             {user?.is_admin && (
-              <NavLink to="/admin/settings" className={link}>
+              <NavLink to="/admin/hosts" className={link}>
                 Admin
+              </NavLink>
+            )}
+            {user && !user.is_admin && (
+              <NavLink to="/host" className={link}>
+                Host
               </NavLink>
             )}
             {user ? (

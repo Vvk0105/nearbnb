@@ -2,7 +2,7 @@
 
 Adding a setting = adding one entry here. The admin UI is generated from this registry.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from app.core.errors import AppError
@@ -20,6 +20,7 @@ class SettingDef:
     max: float | None = None
     choices: tuple[Any, ...] = field(default_factory=tuple)
     unit: str = ""
+    host_override: bool = False  # admin may set a different value for an individual host
 
     def validate(self, value: Any) -> Any:
         def bad(msg: str) -> AppError:
@@ -104,6 +105,10 @@ _DEFS: list[SettingDef] = [
                "Editing any of these sends the listing back to admin review.",
                choices=("address", "property_type", "photos", "description", "price", "capacity",
                         "amenities", "cancellation_policy", "name", "rules")),
+    SettingDef("listing.min_photos", "Listings", "Minimum photos per property", "int", 3,
+               "A property needs at least this many photos before it can be submitted.", min=0, max=50),
+    SettingDef("listing.min_unit_photos", "Listings", "Minimum photos per bookable unit", "int", 1,
+               "Each unit needs at least this many photos before submission.", min=0, max=50),
     SettingDef("listing.max_photos", "Listings", "Max photos per listing", "int", 20, min=1, max=100),
     SettingDef("listing.max_photo_mb", "Listings", "Max photo size", "int", 8, min=1, max=25, unit="MB"),
     # Guest verification
@@ -122,11 +127,21 @@ _DEFS: list[SettingDef] = [
     SettingDef("alerts.host_cancellation_count", "Alerts", "Host cancellation alert: count", "int", 3, min=1, max=100),
     SettingDef("alerts.host_cancellation_days", "Alerts", "Host cancellation alert: window", "int", 30,
                min=1, max=365, unit="days"),
+    # Hosts
+    SettingDef("host.supported_countries", "Hosts", "Countries hosts can be in", "str_list", ["AU"],
+               "Two-letter country codes. Host payouts only work for countries your Stripe account can pay out to "
+               "(with separate charges and transfers, hosts must be in the same country as the platform's Stripe account)."),
     # Calendar sync
     SettingDef("ical.poll_minutes", "Calendar sync", "iCal import interval", "int", 15, min=5, max=240, unit="min"),
 ]
 
-REGISTRY: dict[str, SettingDef] = {d.key: d for d in _DEFS}
+# Settings an admin can override for a single host (everything else is global only).
+HOST_OVERRIDABLE = {
+    "booking.host_response_minutes", "booking.payment_deadline_minutes", "booking.min_lead_time_hours",
+    "booking.max_advance_days", "finance.commission_percent", "payout.anchor", "payout.delay_hours",
+}
+
+REGISTRY: dict[str, SettingDef] = {d.key: replace(d, host_override=d.key in HOST_OVERRIDABLE) for d in _DEFS}
 
 
 def get_def(key: str) -> SettingDef:

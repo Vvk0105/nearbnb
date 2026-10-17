@@ -3,7 +3,7 @@
 Request-to-book accommodation marketplace with exact-hour availability.
 Specs: [docs/01_FINAL_REQUIREMENTS.md](docs/01_FINAL_REQUIREMENTS.md), [docs/02_TECHNICAL_PLAN.md](docs/02_TECHNICAL_PLAN.md), server notes: [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md).
 
-Status: Phase 0 (setup) and Phase 1 (foundation) are done.
+Status: Phases 0 (setup), 1 (foundation) and 2 (hosts and listings) are done.
 
 ## Run locally
 
@@ -46,6 +46,28 @@ docker compose exec web npm test                # frontend tests (login/logout s
 - Append-only audit log (blocked at database level) with an admin viewer.
 - Legal documents with versioning and forced re-acceptance when a new Terms/Privacy version is published.
 - Email outbox with retry, sent by a Celery worker.
+
+## What exists after Phase 2
+
+- **Host application:** form, ID upload (private storage, admin-only, every view audited), Host Terms acceptance, admin approve / reject / request changes, resubmission.
+- **Host state is derived:** active only when approved by admin AND payout-ready on Stripe. Suspended / restricted states hide listings and stop edits.
+- **Stripe Connect (Express):** onboarding link, status refresh, signed `account.updated` webhook with replay protection. In development a fake gateway is used automatically (no keys needed). The real gateway is written but not yet exercised against Stripe.
+- **Properties and units:** generic property types, units with price per 24 h, capacity, amenities, check-in window, and a quantity of identical rooms (hotels). Photos are validated, re-encoded and thumbnailed.
+- **Approval workflow:** completeness checklist, admin approve / reject / request changes, public page for approved listings only (no exact address).
+- **Re-approval:** which edits need admin approval is an admin setting. Edits to a live listing wait in a pending revision while guests keep seeing the approved version (photo changes too).
+- **Availability blocks:** host blocks per room or all rooms, entered in the property's timezone. A database exclusion constraint makes overlapping bookings/blocks impossible even if the API is bypassed.
+- **Per-host overrides** for commission, response/payment deadlines, lead time, advance window and payout timing, with audit.
+- **Admin screens:** hosts queue and detail, listings queue with revisions, property types and amenities.
+
+### Trying the host flow locally
+
+1. Register a normal user, open **Host > Start application**, fill the form, upload any PNG/JPG/PDF as ID, accept the Host Terms, submit.
+2. Log in as admin, **Admin > Hosts**, approve the application.
+3. As the host, open **Host > Payouts**. With no Stripe keys, use **Simulate completed Stripe setup**.
+4. The host is now active: add a property, a unit, photos (property needs 3, each unit 1), and submit.
+5. As admin, **Admin > Listings**, approve it. It is now visible at `/api/v1/properties/<id>`.
+
+For real Stripe testing, set `STRIPE_SECRET_KEY` (test mode) and `STRIPE_WEBHOOK_SECRET` in `.env`, then forward webhooks with `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe`.
 
 ## Production
 

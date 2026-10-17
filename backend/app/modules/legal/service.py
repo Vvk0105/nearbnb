@@ -81,6 +81,9 @@ async def pending_consents(session: AsyncSession, user: User) -> list[dict]:
     for doc_type in CONSENT_REQUIRED_FOR_ALL:
         if doc_type in current and accepted.get(doc_type, 0) < current[doc_type]:
             pending.append({"doc_type": doc_type, "version": current[doc_type], "title": TITLES[doc_type]})
+    # Host Terms are accepted when applying; after that a newer version must be re-accepted.
+    if 0 < accepted.get("host_terms", 0) < current.get("host_terms", 0):
+        pending.append({"doc_type": "host_terms", "version": current["host_terms"], "title": TITLES["host_terms"]})
     return pending
 
 

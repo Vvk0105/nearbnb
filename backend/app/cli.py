@@ -14,13 +14,15 @@ from app.core.db import task_session
 from app.core.security import hash_password
 from app.modules.auth.service import get_user_by_email, normalize_email
 from app.modules.legal import service as legal
+from app.modules.properties.admin_router import seed_catalogues
 from app.modules.users.models import USER_ACTIVE, User
 
 
 async def seed() -> None:
     async with task_session() as session:
         created = await legal.seed_placeholders(session)
-    print(f"Seeded {created} placeholder legal document(s).")
+        catalogue = await seed_catalogues(session)
+    print(f"Seeded {created} placeholder legal document(s) and {catalogue} property type(s)/amenities.")
 
 
 async def create_admin(email: str, name: str, password: str) -> None:

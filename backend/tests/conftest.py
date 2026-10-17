@@ -4,13 +4,18 @@ import re
 from urllib.parse import urlsplit, urlunsplit
 
 # Must be set before the app is imported.
-_base_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://nearbnb:change-me@db:5432/nearbnb")
+_base_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://nearbnb:NearBnb@db:5432/nearbnb")
 _parts = urlsplit(_base_url)
 TEST_DB = "nearbnb_test"
 os.environ["DATABASE_URL"] = urlunsplit(_parts._replace(path=f"/{TEST_DB}"))
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["EMAIL_KICK_ENABLED"] = "false"
 os.environ["TURNSTILE_SECRET_KEY"] = ""
+# Tests must never touch real services, even when the developer's .env holds real keys.
+os.environ["STRIPE_SECRET_KEY"] = ""
+os.environ["STRIPE_WEBHOOK_SECRET"] = ""
+os.environ["SMTP_HOST"] = ""
+os.environ["SMTP_PASSWORD"] = ""
 os.environ["APP_ENV"] = "test"
 os.environ["STORAGE_ROOT"] = "/tmp/nearbnb-test-storage"
 
@@ -24,6 +29,7 @@ from app.core.db import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.modules.legal import service as legal_service  # noqa: E402
 from app.modules.notifications.models import EmailOutbox  # noqa: E402
+from app.modules.properties.admin_router import seed_catalogues  # noqa: E402
 
 PASSWORD = "Sup3r-secret-pass"
 
@@ -42,6 +48,7 @@ async def _setup_database():
     await conn.close()
     async with engine.begin() as c:
         await c.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
+        await c.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
         await c.run_sync(Base.metadata.drop_all)
         await c.run_sync(Base.metadata.create_all)
         # Same append-only guard the migration installs.
@@ -58,12 +65,14 @@ async def _setup_database():
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_tables():
     async with engine.begin() as c:
-        await c.execute(
-            text("TRUNCATE users, user_social_links, user_consents, otp_codes, refresh_tokens, "
-                 "audit_logs, settings, email_outbox, legal_documents RESTART IDENTITY CASCADE")
-        )
+        names = ", ".join(t.name for t in Base.metadata.sorted_tables)
+        await c.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
     async with SessionLocal() as session:
         await legal_service.seed_placeholders(session)
+        await seed_catalogues(session)
+    import shutil
+
+    shutil.rmtree(os.environ["STORAGE_ROOT"], ignore_errors=True)
     yield
 
 
@@ -124,3 +133,18 @@ def make_admin():
             return user
 
     return _make
+
+
+@pytest_asyncio.fixture
+async def new_client():
+    """Factory for extra browser sessions (e.g. a host and an admin at the same time)."""
+    opened: list[AsyncClient] = []
+
+    async def _make() -> AsyncClient:
+        c = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+        opened.append(c)
+        return c
+
+    yield _make
+    for c in opened:
+        await c.aclose()

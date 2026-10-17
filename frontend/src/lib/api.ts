@@ -65,3 +65,9 @@ export function mediaUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   return BASE.startsWith("http") ? new URL(BASE).origin + path : path;
 }
+
+/** Absolute URL for an API path, for links that open outside fetch (e.g. an admin viewing an uploaded ID). */
+export function apiUrl(path: string): string {
+  const base = BASE.startsWith("http") ? BASE : window.location.origin + BASE;
+  return `${base}/v1${path}`;
+}
