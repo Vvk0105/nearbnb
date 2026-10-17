@@ -64,11 +64,11 @@ export function LoginPage() {
           Log in
         </Button>
         <p className="text-sm">
-          <Link to="/forgot-password" className="text-rose-600 hover:underline">
+          <Link to="/forgot-password" className="text-brand-600 hover:underline">
             Forgot password?
           </Link>
           {" · "}
-          <Link to="/register" className="text-rose-600 hover:underline">
+          <Link to="/register" className="text-brand-600 hover:underline">
             Create account
           </Link>
         </p>
@@ -111,11 +111,11 @@ export function RegisterPage() {
           <input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} required />
           <span>
             I agree to the{" "}
-            <Link to="/legal/terms" target="_blank" className="text-rose-600 underline">
+            <Link to="/legal/terms" target="_blank" className="text-brand-600 underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link to="/legal/privacy" target="_blank" className="text-rose-600 underline">
+            <Link to="/legal/privacy" target="_blank" className="text-brand-600 underline">
               Privacy Policy
             </Link>
           </span>
@@ -126,7 +126,7 @@ export function RegisterPage() {
         </Button>
         <p className="text-sm">
           Already have an account?{" "}
-          <Link to="/login" className="text-rose-600 hover:underline">
+          <Link to="/login" className="text-brand-600 hover:underline">
             Log in
           </Link>
         </p>

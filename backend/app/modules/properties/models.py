@@ -59,8 +59,8 @@ class Property(UUIDPrimaryKey, TimestampMixin, Base):
     state: Mapped[str] = mapped_column(String(50), default="")
     postcode: Mapped[str] = mapped_column(String(20), default="")
     country: Mapped[str] = mapped_column(String(2), default="AU")
-    latitude: Mapped[float | None] = mapped_column(Float)
-    longitude: Mapped[float | None] = mapped_column(Float)
+    latitude: Mapped[float | None] = mapped_column(Float, index=True)
+    longitude: Mapped[float | None] = mapped_column(Float, index=True)
     timezone: Mapped[str] = mapped_column(String(64), default="Australia/Sydney")
     checkin_instructions: Mapped[str] = mapped_column(Text, default="")  # shown to the guest only after confirmation
     cancellation_template_key: Mapped[str | None] = mapped_column(String(50))

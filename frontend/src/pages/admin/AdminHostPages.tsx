@@ -40,7 +40,7 @@ export function HostsListPage() {
         <tbody>
           {data?.items.map((h) => (
             <tr key={h.id} className="border-b border-gray-100">
-              <td className="py-2 pr-3"><Link className="text-rose-600 hover:underline" to={`/admin/hosts/${h.id}`}>{h.full_name}</Link></td>
+              <td className="py-2 pr-3"><Link className="text-brand-600 hover:underline" to={`/admin/hosts/${h.id}`}>{h.full_name}</Link></td>
               <td className="pr-3">{h.email}</td>
               <td className="pr-3"><StatusBadge status={h.state} /></td>
               <td>{h.submitted_at ? new Date(h.submitted_at).toLocaleString() : "-"}</td>
@@ -91,7 +91,7 @@ export function HostDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/hosts" className="text-sm text-rose-600 hover:underline">← Hosts</Link>
+        <Link to="/admin/hosts" className="text-sm text-brand-600 hover:underline">← Hosts</Link>
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{data.user.full_name}</h1><StatusBadge status={data.state} /></div>
         <p className="text-sm text-gray-600">{data.user.email}{data.user.phone ? ` · ${data.user.phone}` : ""}</p>
       </div>
@@ -110,7 +110,7 @@ export function HostDetailPage() {
           {data.documents?.map((d) => (
             <li key={d.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm">
               <span><strong>{label(d.doc_type)}</strong> · {d.original_name} · {(d.size_bytes / 1024).toFixed(0)} KB</span>
-              <a className="text-rose-600 hover:underline" href={apiUrl(`/admin/hosts/${hostId}/documents/${d.id}/file`)} target="_blank" rel="noreferrer noopener">View</a>
+              <a className="text-brand-600 hover:underline" href={apiUrl(`/admin/hosts/${hostId}/documents/${d.id}/file`)} target="_blank" rel="noreferrer noopener">View</a>
             </li>
           ))}
           {data.documents?.length === 0 && <li className="text-sm text-gray-500">No documents uploaded.</li>}
@@ -172,10 +172,10 @@ export function HostDetailPage() {
                     ) : (
                       <input className="w-24 rounded border border-gray-300 px-2 py-1" value={text} onChange={(e) => setDrafts({ ...drafts, [o.key]: e.target.value })} />
                     )}
-                    {o.overridden && <span className="ml-2 text-xs text-rose-600">overridden</span>}
+                    {o.overridden && <span className="ml-2 text-xs text-brand-600">overridden</span>}
                   </td>
                   <td className="space-x-2 whitespace-nowrap">
-                    <button className="text-rose-600 hover:underline" onClick={() => act(() => api(`/admin/hosts/${hostId}/overrides/${o.key}`, { method: "PUT", body: { value: parseOverride(o, text) } }), `${o.label} set for this host.`)}>Set</button>
+                    <button className="text-brand-600 hover:underline" onClick={() => act(() => api(`/admin/hosts/${hostId}/overrides/${o.key}`, { method: "PUT", body: { value: parseOverride(o, text) } }), `${o.label} set for this host.`)}>Set</button>
                     {o.overridden && <button className="text-gray-500 hover:underline" onClick={() => act(async () => { await api(`/admin/hosts/${hostId}/overrides/${o.key}`, { method: "DELETE" }); setDrafts({ ...drafts, [o.key]: String(o.global_value) }); }, `${o.label} reset to the global value.`)}>Reset</button>}
                   </td>
                 </tr>

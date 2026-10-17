@@ -238,7 +238,7 @@ export function ApplyPage() {
         <Card title="Submit">
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-            <span>I have read and accept the <Link to="/legal/host_terms" target="_blank" className="text-rose-600 underline">Host Terms</Link>.</span>
+            <span>I have read and accept the <Link to="/legal/host_terms" target="_blank" className="text-brand-600 underline">Host Terms</Link>.</span>
           </label>
           <div className="mt-4"><Button onClick={submit} loading={busy} disabled={!accepted}>Submit application</Button></div>
         </Card>

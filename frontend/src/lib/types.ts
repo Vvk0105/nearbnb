@@ -95,3 +95,34 @@ export type CalendarData = {
   timezone: string; rooms: Room[];
   entries: { id: string; room_id: string; room_label: string; kind: string; note: string | null; start_local: string; end_local: string }[];
 };
+
+// ---- guest side (Phase 3) ----
+export type SearchItem = {
+  id: string; name: string; type_name: string | null; suburb: string; state: string;
+  cover_url: string | null; thumb_url: string | null; currency: string; min_price: number; distance_km: number | null;
+  units: { id: string; name: string; price_per_24h: number; capacity: number }[];
+};
+export type SearchResult = { total: number; page: number; page_size: number; items: SearchItem[]; hint: string | null };
+
+export type BookingMeta = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
+export type UnitRules = { interval_minutes: number; step_hours: number; max_stay_hours: number; min_lead_hours: number; max_advance_days: number };
+export type PublicUnit = UnitData & { rules: UnitRules };
+export type PublicProperty = Omit<PropertyData, "units" | "checklist" | "pending_revisions" | "result"> & { units: PublicUnit[]; host_first_name: string };
+
+export type DayStatus = "available" | "partial" | "unavailable" | "past" | "closed";
+export type CalendarMonth = { timezone: string; year: number; month: number; days: { date: string; status: DayStatus }[] };
+export type Timeline = { timezone: string; date: string; rooms: number; occupied: { start_local: string; end_local: string; kind: "booked" | "unavailable"; label: string }[] };
+export type PriceBreakdown = {
+  nights: number; hours: number; accommodation: number; cleaning_fee: number; service_fee: number; service_fee_percent: number;
+  tax: number; tax_name: string | null; tax_rate_percent: number; tax_inclusive: boolean; total: number;
+};
+export type Alternative = { checkin_local: string; checkout_local: string; label: string };
+export type Quote = {
+  available: boolean; code?: string; message?: string; alternatives: Alternative[]; timezone: string; hours: number; guests: number;
+  checkin_local?: string; checkout_local?: string; checkin_label?: string; checkout_label?: string; currency?: string;
+  rooms_free?: number; price?: PriceBreakdown;
+};
+export type Place = {
+  label: string; latitude: number; longitude: number;
+  address: { address_line1: string; suburb: string; state: string; postcode: string; country: string };
+};

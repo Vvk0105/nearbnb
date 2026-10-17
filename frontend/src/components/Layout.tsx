@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate } from "react
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { User } from "../lib/types";
+import { Logo } from "./Logo";
 import { Alert, Button, errorMessage } from "./ui";
 
 export function Layout() {
@@ -10,16 +11,17 @@ export function Layout() {
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState("");
   const link = ({ isActive }: { isActive: boolean }) =>
-    `rounded px-2 py-1 text-sm ${isActive ? "bg-rose-50 font-medium text-rose-700" : "text-gray-600 hover:text-gray-900"}`;
+    `rounded px-2 py-1 text-sm ${isActive ? "bg-brand-50 font-medium text-brand-700" : "text-gray-600 hover:text-gray-900"}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 text-ink">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-xl font-bold text-rose-600">
-            NearBNB
-          </Link>
+          <Logo />
           <nav className="flex items-center gap-2">
+            <NavLink to="/search" className={link}>
+              Explore
+            </NavLink>
             {user?.is_admin && (
               <NavLink to="/admin/hosts" className={link}>
                 Admin
@@ -111,7 +113,7 @@ function ConsentGate({ user }: { user: User }) {
         <ul className="list-disc pl-5 text-sm">
           {user.pending_consents.map((c) => (
             <li key={c.doc_type}>
-              <Link to={`/legal/${c.doc_type}`} target="_blank" className="text-rose-600 underline">
+              <Link to={`/legal/${c.doc_type}`} target="_blank" className="text-brand-600 underline">
                 {c.title}
               </Link>
             </li>

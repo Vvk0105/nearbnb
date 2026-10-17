@@ -7,7 +7,7 @@ import { Alert, Button, Card, Field, errorMessage } from "../../components/ui";
 
 export function AdminLayout() {
   const tab = ({ isActive }: { isActive: boolean }) =>
-    `rounded-lg px-3 py-1.5 text-sm ${isActive ? "bg-rose-600 text-white" : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"}`;
+    `rounded-lg px-3 py-1.5 text-sm ${isActive ? "bg-brand-600 text-white" : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"}`;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
@@ -15,6 +15,7 @@ export function AdminLayout() {
         <NavLink to="/admin/listings" className={tab}>Listings</NavLink>
         <NavLink to="/admin/settings" className={tab}>Settings</NavLink>
         <NavLink to="/admin/catalogues" className={tab}>Types &amp; amenities</NavLink>
+        <NavLink to="/admin/tax" className={tab}>Tax</NavLink>
         <NavLink to="/admin/legal" className={tab}>Legal documents</NavLink>
         <NavLink to="/admin/audit" className={tab}>Audit log</NavLink>
       </div>

@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     email_reply_to: str = ""
     email_kick_enabled: bool = True
 
+    google_places_api_key: str = ""
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
 

@@ -31,7 +31,7 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger"; loading?: boolean }) {
   const styles = {
-    primary: "bg-rose-600 text-white hover:bg-rose-700",
+    primary: "bg-brand-600 text-white hover:bg-brand-700",
     secondary: "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50",
     danger: "bg-red-600 text-white hover:bg-red-700",
   }[variant];
@@ -60,7 +60,7 @@ export function Field({
       <input
         id={id}
         {...rest}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
@@ -92,7 +92,7 @@ export function TextArea({ label, id, hint, ...rest }: React.TextareaHTMLAttribu
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-      <textarea id={id} rows={4} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500 disabled:bg-gray-50" />
+      <textarea id={id} rows={4} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50" />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   );
@@ -102,7 +102,7 @@ export function Select({ label, id, children, ...rest }: React.SelectHTMLAttribu
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-      <select id={id} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-rose-500 focus:outline-none disabled:bg-gray-50">{children}</select>
+      <select id={id} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none disabled:bg-gray-50">{children}</select>
     </div>
   );
 }

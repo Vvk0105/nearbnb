@@ -862,6 +862,17 @@ async def public_property(session: AsyncSession, property_id: uuid.UUID) -> dict
     if prop.status != ST_APPROVED or not host_service.is_active(host):
         raise AppError(404, "NOT_FOUND", "Property not found")
     data = await serialize_property(session, prop, host_view=False)
+    from app.modules.availability import service as availability  # local import: availability imports this module's models
+
+    globals_ = await availability.load_global_rules(session)
+    overrides = (await availability.overrides_for_hosts(session, {host.id})).get(host.id)
+    by_id = {u.id: u for u in prop.units}
+    for unit_json in data["units"]:
+        r = availability.rules_for(by_id[uuid.UUID(unit_json["id"])], globals_, overrides)
+        unit_json["rules"] = {
+            "interval_minutes": r.interval_minutes, "step_hours": r.step_hours, "max_stay_hours": r.max_stay_hours,
+            "min_lead_hours": r.min_lead_hours, "max_advance_days": r.max_advance_days,
+        }
     owner = await session.get(User, host.user_id)
     data["host_first_name"] = owner.full_name.split()[0]
     # The exact address is only revealed to a guest after a confirmed booking.

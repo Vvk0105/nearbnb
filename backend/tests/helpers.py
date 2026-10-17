@@ -1,4 +1,7 @@
 import io
+import uuid
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from PIL import Image
 
@@ -108,3 +111,37 @@ async def live_listing(host_client, admin, **kwargs) -> dict:
     r = await admin.post(f"{API}/admin/properties/{prop['id']}/decision", json={"decision": "approve"}, headers=csrf_headers(admin))
     assert r.status_code == 200, r.text
     return (await host_client.get(f"{API}/host/properties/{prop['id']}")).json()
+
+
+def day_local(days: int, hour: int = 14, tz: str = "Australia/Sydney") -> str:
+    """Local wall-clock time at the property, `days` from today, e.g. '2026-11-03T14:00'."""
+    now_local = datetime.now(UTC).astimezone(ZoneInfo(tz))
+    return (now_local + timedelta(days=days)).strftime(f"%Y-%m-%dT{hour:02d}:00")
+
+
+def to_utc_range(start_local: str, end_local: str, tz: str = "Australia/Sydney"):
+    zone = ZoneInfo(tz)
+    return (datetime.fromisoformat(start_local).replace(tzinfo=zone).astimezone(UTC),
+            datetime.fromisoformat(end_local).replace(tzinfo=zone).astimezone(UTC))
+
+
+async def occupy(db, room_id: str, start_local: str, end_local: str, kind: str = "booking", tz: str = "Australia/Sydney"):
+    """Inserts occupancy directly, the way later phases will for real bookings."""
+    from sqlalchemy.dialects.postgresql import Range
+
+    from app.modules.properties.models import RoomOccupancy
+
+    start, end = to_utc_range(start_local, end_local, tz)
+    row = RoomOccupancy(room_id=uuid.UUID(room_id), period=Range(start, end, bounds="[)"), kind=kind)
+    db.add(row)
+    await db.commit()
+    return row
+
+
+async def set_location(db, property_id: str, lat: float | None, lng: float | None):
+    from sqlalchemy import update
+
+    from app.modules.properties.models import Property
+
+    await db.execute(update(Property).where(Property.id == uuid.UUID(property_id)).values(latitude=lat, longitude=lng))
+    await db.commit()

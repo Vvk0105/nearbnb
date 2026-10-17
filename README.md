@@ -3,7 +3,7 @@
 Request-to-book accommodation marketplace with exact-hour availability.
 Specs: [docs/01_FINAL_REQUIREMENTS.md](docs/01_FINAL_REQUIREMENTS.md), [docs/02_TECHNICAL_PLAN.md](docs/02_TECHNICAL_PLAN.md), server notes: [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md).
 
-Status: Phases 0 (setup), 1 (foundation) and 2 (hosts and listings) are done.
+Status: Phases 0 (setup), 1 (foundation), 2 (hosts and listings) and 3 (guest discovery) are done. Next: Phase 4 (booking requests).
 
 ## Run locally
 
@@ -58,6 +58,25 @@ docker compose exec web npm test                # frontend tests (login/logout s
 - **Availability blocks:** host blocks per room or all rooms, entered in the property's timezone. A database exclusion constraint makes overlapping bookings/blocks impossible even if the API is bypassed.
 - **Per-host overrides** for commission, response/payment deadlines, lead time, advance window and payout timing, with audit.
 - **Admin screens:** hosts queue and detail, listings queue with revisions, property types and amenities.
+
+## What exists after Phase 3
+
+- **Look and feel:** text logo "NearBnB" and a teal palette. Both live in one place (`frontend/tailwind.config.js` and `frontend/src/components/Logo.tsx`), so a client brand is a small edit.
+- **Search:** by place name (suburb, state, postcode) or by location (latitude/longitude and radius, nearest first), with guests, price range, property type and amenity filters, sorting and paging. Only live listings by active hosts appear.
+- **Availability filter:** give a check-in date/time and a number of nights and only places with a room free for the whole stay are listed, each host's own rules (lead time, advance window) applied.
+- **Property page:** photos, description, rules, units, and per unit an availability panel with a colour-coded month calendar, a 24-hour day timeline, check-in time / stay length / guest pickers, and an instant answer.
+- **Quotes:** available or not, with a clear reason ("Someone is staying from 25 Sep 2:00 PM until 26 Sep 2:00 PM"), alternative times, and a full price breakdown (accommodation, cleaning, service fee, tax, total). Hotels: "3 rooms free", and an explanation when no single room fits the whole stay.
+- **Tax:** admin-managed rules per country (Admin > Tax). The price calculator works in whole cents and supports tax-inclusive and tax-exclusive prices, configurable rounding, and commission and host payout (used from Phase 4).
+- **Google Places (optional):** address and area autocomplete through our own server, so the key never reaches the browser. Without a key everything still works with plain text search.
+
+### Google Places setup
+
+1. Google Cloud Console > create a project > attach a billing account (the free monthly quota applies).
+2. Enable **Places API (New)**.
+3. Credentials > Create credentials > API key. Restrict it to the Places API, and restrict by IP address to your server (and your own IP for development).
+4. Put it in `.env` as `GOOGLE_PLACES_API_KEY=...`, then `docker compose up -d --force-recreate api`.
+
+The Places code is covered by tests using a simulated Google. It has not been run against the real service yet.
 
 ### Trying the host flow locally
 

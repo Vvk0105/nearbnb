@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { fieldLabel, fromCents, money, toCents } from "../../lib/format";
 import type { CalendarData, ListingMeta, PropertyData, UnitData } from "../../lib/types";
 import { PhotoManager } from "../../components/PhotoManager";
+import { PlaceInput } from "../../components/PlaceInput";
 import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
 import { useHost } from "./HostPages";
 
@@ -80,7 +81,7 @@ export function PropertiesPage() {
       {isLoading && <p className="text-gray-500">Loading...</p>}
       <div className="space-y-3">
         {data?.map((p) => (
-          <Link key={p.id} to={`/host/properties/${p.id}`} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-rose-300">
+          <Link key={p.id} to={`/host/properties/${p.id}`} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-semibold">{p.name}</p>
@@ -106,6 +107,7 @@ export function PropertyEditor() {
   const { data: meta } = useMeta();
   const [form, setForm] = useState<Record<string, string>>({});
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [finder, setFinder] = useState("");
   const [newUnit, setNewUnit] = useState({ name: "", price: "", capacity: "2", quantity: "1" });
   const details = useAction();
   const life = useAction();
@@ -172,7 +174,7 @@ export function PropertyEditor() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link to="/host/properties" className="text-sm text-rose-600 hover:underline">← All properties</Link>
+        <Link to="/host/properties" className="text-sm text-brand-600 hover:underline">← All properties</Link>
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{property.name}</h1><StatusBadge status={property.status} /></div>
       </div>
 
@@ -218,6 +220,11 @@ export function PropertyEditor() {
           </Select>
           <TextArea id="description" label="Description" value={form.description ?? ""} onChange={set("description")} disabled={locked} />
           <TextArea id="rules" label="House rules" rows={3} value={form.rules ?? ""} onChange={set("rules")} disabled={locked} />
+          {!locked && (
+            <PlaceInput id="find_address" kind="address" label="Find the address" placeholder="Start typing the street address"
+              value={finder} onChange={setFinder}
+              onSelect={(p) => setForm((f) => ({ ...f, ...p.address, address_line1: p.address.address_line1 || f.address_line1, latitude: String(p.latitude), longitude: String(p.longitude) }))} />
+          )}
           <Field id="address_line1" label="Street address" value={form.address_line1 ?? ""} onChange={set("address_line1")} disabled={locked} />
           <Field id="address_line2" label="Address line 2" value={form.address_line2 ?? ""} onChange={set("address_line2")} disabled={locked} />
           <div className="grid grid-cols-2 gap-4">
@@ -247,7 +254,7 @@ export function PropertyEditor() {
         <p className="mb-3 text-sm text-gray-600">A unit is what a guest actually books: a whole house, or a room type such as "Standard room" (with a number of identical rooms).</p>
         <div className="space-y-3">
           {property.units.map((u) => (
-            <Link key={u.id} to={`/host/properties/${property.id}/units/${u.id}`} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:border-rose-300">
+            <Link key={u.id} to={`/host/properties/${property.id}/units/${u.id}`} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:border-brand-300">
               <div>
                 <p className="font-medium">{u.name}</p>
                 <p className="text-xs text-gray-500">{u.price_per_24h ? `${money(u.price_per_24h, u.currency)} / 24h` : "No price yet"} · sleeps {u.capacity} · {u.quantity} room(s)</p>
@@ -412,7 +419,7 @@ export function UnitEditor() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link to={`/host/properties/${property.id}`} className="text-sm text-rose-600 hover:underline">← {property.name}</Link>
+        <Link to={`/host/properties/${property.id}`} className="text-sm text-brand-600 hover:underline">← {property.name}</Link>
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{unit.name}</h1><StatusBadge status={unit.status} /></div>
       </div>
       {unit.review_note && <Alert kind="info">Message from the NearBNB team: {unit.review_note}</Alert>}

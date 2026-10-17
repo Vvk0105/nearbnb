@@ -67,7 +67,7 @@ function ProfileCard({ user }: { user: User }) {
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-xl text-gray-500">{user.full_name[0]}</div>
           )}
-          <label className="cursor-pointer text-sm text-rose-600 hover:underline">
+          <label className="cursor-pointer text-sm text-brand-600 hover:underline">
             Change photo
             <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
           </label>
@@ -97,7 +97,7 @@ function SocialCard({ user }: { user: User }) {
           {user.social_links.map((l) => (
             <li key={l.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm">
               <span>
-                <strong>{l.platform}</strong> · <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-rose-600 hover:underline">{l.url}</a>
+                <strong>{l.platform}</strong> · <a href={l.url} target="_blank" rel="noreferrer noopener" className="text-brand-600 hover:underline">{l.url}</a>
               </span>
               <button className="text-xs text-red-600 hover:underline" onClick={() => run(async () => setUser(await api<User>(`/me/social-links/${l.id}`, { method: "DELETE" })))}>
                 Remove
@@ -288,7 +288,7 @@ function TwoFactorCard({ user }: { user: User }) {
           >
             <p className="text-sm text-gray-600">Add this key to your authenticator app (Google Authenticator, Authy, 1Password), then enter the 6-digit code.</p>
             <code className="block break-all rounded bg-gray-100 p-2 text-sm">{setup.secret}</code>
-            <a href={setup.otpauth_uri} className="text-sm text-rose-600 hover:underline">
+            <a href={setup.otpauth_uri} className="text-sm text-brand-600 hover:underline">
               Open in authenticator app
             </a>
             <Field id="2fa-enable" label="Authentication code" inputMode="numeric" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} />

@@ -1,10 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout, RequireAdmin, RequireAuth } from "./components/Layout";
 import Home from "./pages/Home";
+import PropertyPage from "./pages/PropertyPage";
+import SearchPage from "./pages/Search";
 import LegalPage from "./pages/Legal";
 import AccountPage from "./pages/account/Account";
 import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
+import { TaxRulesPage } from "./pages/admin/AdminTaxPage";
 import { CataloguesPage, ListingDetailPage, ListingsPage } from "./pages/admin/AdminListingPages";
 import { ApplyPage, HostHome, PayoutsPage } from "./pages/host/HostPages";
 import { PropertiesPage, PropertyEditor, UnitEditor } from "./pages/host/PropertyPages";
@@ -20,6 +23,8 @@ export default function App() {
         <Route path="verify" element={<VerifyEmailPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="reset-password" element={<ResetPasswordPage />} />
+        <Route path="search" element={<SearchPage />} />
+        <Route path="property/:propertyId" element={<PropertyPage />} />
         <Route path="legal/:docType" element={<LegalPage />} />
 
         <Route element={<RequireAuth />}>
@@ -41,6 +46,7 @@ export default function App() {
             <Route path="listings" element={<ListingsPage />} />
             <Route path="listings/:propertyId" element={<ListingDetailPage />} />
             <Route path="catalogues" element={<CataloguesPage />} />
+            <Route path="tax" element={<TaxRulesPage />} />
             <Route path="legal" element={<LegalAdminPage />} />
             <Route path="audit" element={<AuditPage />} />
           </Route>

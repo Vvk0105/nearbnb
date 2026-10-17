@@ -27,7 +27,7 @@ export function ListingsPage() {
           {revs.data?.map((r) => (
             <li key={r.id} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm">
               <span><strong>{r.label}</strong> · {[...r.fields.map(fieldLabel), ...(r.photos_changed ? ["Photos"] : [])].join(", ")}</span>
-              <Link className="text-rose-600 hover:underline" to={`/admin/listings/${r.property_id}`}>Review</Link>
+              <Link className="text-brand-600 hover:underline" to={`/admin/listings/${r.property_id}`}>Review</Link>
             </li>
           ))}
           {revs.data?.length === 0 && <li className="text-sm text-gray-500">Nothing waiting.</li>}
@@ -53,7 +53,7 @@ export function ListingsPage() {
           <tbody>
             {props.data?.items.map((p) => (
               <tr key={p.id} className="border-b border-gray-100">
-                <td className="py-2 pr-3"><Link className="text-rose-600 hover:underline" to={`/admin/listings/${p.id}`}>{p.name}</Link><div className="text-xs text-gray-500">{[p.suburb, p.state].filter(Boolean).join(", ")}</div></td>
+                <td className="py-2 pr-3"><Link className="text-brand-600 hover:underline" to={`/admin/listings/${p.id}`}>{p.name}</Link><div className="text-xs text-gray-500">{[p.suburb, p.state].filter(Boolean).join(", ")}</div></td>
                 <td className="pr-3">{p.host_name}<div className="text-xs text-gray-500">{p.host_email}</div></td>
                 <td className="pr-3">{p.units}{p.pending_units > 0 && <span className="ml-1 text-xs text-amber-700">({p.pending_units} pending)</span>}</td>
                 <td className="pr-3"><StatusBadge status={p.status} />{p.has_pending_revision && <span className="ml-1"><StatusBadge status="pending" /></span>}</td>
@@ -116,9 +116,9 @@ export function ListingDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/admin/listings" className="text-sm text-rose-600 hover:underline">← Listings</Link>
+        <Link to="/admin/listings" className="text-sm text-brand-600 hover:underline">← Listings</Link>
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{data.name}</h1><StatusBadge status={data.status} /></div>
-        <p className="text-sm text-gray-600">Host: <Link className="text-rose-600 hover:underline" to={`/admin/hosts/${data.host.id}`}>{data.host.name}</Link> ({data.host.email}) · <StatusBadge status={data.host.state} /></p>
+        <p className="text-sm text-gray-600">Host: <Link className="text-brand-600 hover:underline" to={`/admin/hosts/${data.host.id}`}>{data.host.name}</Link> ({data.host.email}) · <StatusBadge status={data.host.state} /></p>
       </div>
       {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
 
@@ -232,7 +232,7 @@ function CatalogueList({ title, kind, items }: { title: string; kind: "property-
         {items.map((i) => (
           <li key={i.id} className="flex items-center justify-between py-2 text-sm">
             <span className={i.active ? "" : "text-gray-400 line-through"}>{i.name}</span>
-            <button className="text-xs text-rose-600 hover:underline" onClick={() => run(() => api(`/admin/${kind}/${i.id}`, { method: "PUT", body: { name: i.name, active: !i.active } }))}>{i.active ? "Hide from hosts" : "Show again"}</button>
+            <button className="text-xs text-brand-600 hover:underline" onClick={() => run(() => api(`/admin/${kind}/${i.id}`, { method: "PUT", body: { name: i.name, active: !i.active } }))}>{i.active ? "Hide from hosts" : "Show again"}</button>
           </li>
         ))}
       </ul>
