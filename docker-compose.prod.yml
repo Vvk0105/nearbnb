@@ -37,8 +37,11 @@ services:
     image: nearbnb-backend:latest
     restart: unless-stopped
     env_file: .env
-    # Behind Caddy on the private compose network, so forwarded headers can be trusted (real client IP for rate limits).
+    # Behind nginx (or Caddy) on this server only, so forwarded headers can be trusted (real client IP for rate limits).
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips=*
+    # Reachable only from this server (the existing nginx proxies api.nearbnb.com to it), never from the internet directly.
+    ports:
+      - "127.0.0.1:8001:8000"
     volumes:
       - storage:/data/storage
     mem_limit: 300m
@@ -72,11 +75,14 @@ services:
       redis:
         condition: service_healthy
 
+  # Only used when nothing else owns ports 80/443: docker compose --profile caddy up -d
+  # On a server that already runs nginx, leave this off and use deploy/nginx-api.nearbnb.com.conf instead.
   caddy:
+    profiles: ["caddy"]
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
-      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN, e.g. api.nearbnb.com}
+      API_DOMAIN: ${API_DOMAIN:-api.nearbnb.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
