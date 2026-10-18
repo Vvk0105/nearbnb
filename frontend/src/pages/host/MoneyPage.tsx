@@ -22,7 +22,7 @@ export function MoneyPage() {
   const s = data.summary;
   const csv = apiUrl(`/host/money/export.csv${month ? `?month=${month}` : ""}`);
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <h1 className="text-2xl font-bold">Earnings and payouts</h1>
       <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[

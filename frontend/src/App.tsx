@@ -20,6 +20,7 @@ import { MoneyPage } from "./pages/host/MoneyPage";
 import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
 import { AdminLayout } from "./components/AdminShell";
+import { HostLayout } from "./components/HostShell";
 import { AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
 import { TaxRulesPage } from "./pages/admin/AdminTaxPage";
@@ -48,17 +49,23 @@ export default function App() {
           <Route path="account/trips/:bookingId" element={<TripDetailPage />} />
           <Route path="account/trips/:bookingId/pay" element={<PayPage />} />
           <Route path="account/trips/:bookingId/invoice" element={<InvoicePage />} />
-          <Route path="host" element={<HostHome />} />
-          <Route path="host/apply" element={<ApplyPage />} />
-          <Route path="host/payouts" element={<PayoutsPage />} />
-          <Route path="host/money" element={<MoneyPage />} />
-          <Route path="host/requests" element={<RequestsPage />} />
-          <Route path="host/properties" element={<PropertiesPage />} />
-          <Route path="host/properties/:propertyId" element={<PropertyEditor />} />
-          <Route path="host/properties/:propertyId/units/:unitId" element={<UnitEditor />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+
+      <Route element={<RequireAuth />}>
+        <Route path="host" element={<HostLayout />}>
+          <Route index element={<HostHome />} />
+          <Route path="apply" element={<ApplyPage />} />
+          <Route path="payouts" element={<PayoutsPage />} />
+          <Route path="money" element={<MoneyPage />} />
+          <Route path="requests" element={<RequestsPage />} />
+          <Route path="properties" element={<PropertiesPage />} />
+          <Route path="properties/:propertyId" element={<PropertyEditor />} />
+          <Route path="properties/:propertyId/units/:unitId" element={<UnitEditor />} />
+          <Route path="*" element={<Navigate to="/host" replace />} />
+        </Route>
       </Route>
 
       <Route element={<RequireAdmin />}>

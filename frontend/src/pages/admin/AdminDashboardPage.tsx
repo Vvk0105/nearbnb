@@ -1,12 +1,12 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { money } from "../../lib/format";
 import type { AdminAlert, AdminDashboardData } from "../../lib/types";
 import { Alert, errorMessage } from "../../components/ui";
-import { AreaChart, BarChart, ProgressBar, Sparkline } from "../../components/charts";
-import { Icon, type IconName } from "../../components/icons";
+import { AreaChart, BarChart, ProgressBar } from "../../components/charts";
+import { Icon } from "../../components/icons";
+import { Kpi, Panel } from "../../components/dashboardUi";
 
 const DOT: Record<string, string> = { problem: "bg-red-500", action: "bg-amber-500", info: "bg-sky-400", none: "bg-slate-300" };
 const ROW: Record<string, string> = {
@@ -16,35 +16,6 @@ const ROW: Record<string, string> = {
   none: "border-slate-200 bg-white text-slate-500 hover:bg-slate-50",
 };
 const ORDER: Record<string, number> = { problem: 0, action: 1, info: 2, none: 3 };
-
-function Panel({ title, action, children, className = "" }: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
-  return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** A headline number with an icon and an optional trend line. Label first, value second, so screen readers read it naturally. */
-function Kpi({ label, value, hint, icon, spark }: { label: string; value: string | number; hint?: string; icon: IconName; spark?: number[] }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><Icon name={icon} /></span>
-        {spark && <Sparkline values={spark} />}
-      </div>
-      <dl className="mt-3">
-        <dt className="text-sm text-slate-500">{label}</dt>
-        <dd className="mt-0.5 text-2xl font-semibold tracking-tight">{value}</dd>
-      </dl>
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-    </div>
-  );
-}
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (

@@ -15,14 +15,27 @@ export function useHost() {
 }
 
 function Steps({ host }: { host: HostInfo }) {
+  const steps = host.steps ?? [];
+  const done = steps.filter((s) => s.done).length;
+  if (steps.length === 0) return null;
   return (
-    <ol className="flex flex-wrap gap-2">
-      {host.steps?.map((s, i) => (
-        <li key={s.key} className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${s.done ? "border-green-300 bg-green-50 text-green-800" : "border-gray-200 bg-white text-gray-500"}`}>
-          <span className="font-semibold">{s.done ? "✓" : i + 1}</span> {s.label}
-        </li>
-      ))}
-    </ol>
+    <section aria-label="Setup progress" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-3 flex items-center justify-between text-sm">
+        <span className="font-medium">Getting set up</span>
+        <span className="text-slate-500">{done} of {steps.length} done</span>
+      </div>
+      <div className="mb-4 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
+        <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${(done / steps.length) * 100}%` }} />
+      </div>
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((s, i) => (
+          <li key={s.key} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${s.done ? "border-green-200 bg-green-50 text-green-800" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${s.done ? "bg-green-600 text-white" : "bg-slate-200 text-slate-600"}`}>{s.done ? "✓" : i + 1}</span>
+            {s.label}
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -73,9 +86,9 @@ export function HostHome() {
   const action = next[host.state];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">Host dashboard</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Host dashboard</h1>
         <StatusBadge status={host.state} />
       </div>
       <Steps host={host} />

@@ -84,7 +84,7 @@ export function PropertiesPage() {
 
   if (error) return <Alert>{errorMessage(error)}</Alert>;
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <h1 className="text-2xl font-bold">Your properties</h1>
       {host && !host.can_create_listings && <Alert kind="info">You can add properties once your host application is approved.</Alert>}
       {host?.can_create_listings && !host.can_submit_listings && <Alert kind="info">You can draft properties now. Submitting for approval unlocks when payout setup is complete.</Alert>}

@@ -108,7 +108,7 @@ export function RequestsPage() {
     await refetch();
   };
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <h1 className="text-2xl font-bold">Booking requests</h1>
       <div className="flex flex-wrap gap-2" role="tablist">
         {TABS.map(([key, text]) => (
