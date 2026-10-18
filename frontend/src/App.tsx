@@ -10,6 +10,7 @@ import { PayPage } from "./pages/account/Pay";
 import { InvoicePage } from "./pages/account/Invoice";
 import { AdminBookingsPage } from "./pages/admin/AdminBookingsPage";
 import { AdminBookingDetailPage } from "./pages/admin/AdminBookingDetailPage";
+import { AdminCalendarPage } from "./pages/admin/AdminCalendarPage";
 import { AdminCancellationPage } from "./pages/admin/AdminCancellationPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminExportsPage, AdminPaymentsPage, AdminPayoutsPage, AdminWebhooksPage } from "./pages/admin/AdminMoneyPages";
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="users/:userId" element={<AdminUserDetailPage />} />
             <Route path="payments" element={<AdminPaymentsPage />} />
             <Route path="payouts" element={<AdminPayoutsPage />} />
+            <Route path="calendar" element={<AdminCalendarPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="issues" element={<AdminIssuesPage />} />
             <Route path="webhooks" element={<AdminWebhooksPage />} />

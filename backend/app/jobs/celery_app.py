@@ -20,6 +20,7 @@ celery_app.conf.update(
         "release-payouts": {"task": "payouts.release", "schedule": 600.0},
         "advance-bookings": {"task": "bookings.advance", "schedule": 60.0},
         "process-reviews": {"task": "reviews.process", "schedule": 900.0},
+        "sync-calendars": {"task": "ical.dispatch", "schedule": 300.0},
         "cleanup-auth-data": {"task": "auth.cleanup", "schedule": 86400.0},
     },
 )

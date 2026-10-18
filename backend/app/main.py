@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from app.modules.bookings.router import router as bookings_router
 from app.modules.dashboards.router import router as dashboards_router
 from app.modules.cancellations.admin_router import router as cancellation_templates_router
 from app.modules.cancellations.router import router as cancellations_router
+from app.modules.ical.router import router as ical_router
 from app.modules.issues.router import router as issues_router
 from app.modules.hosts.admin_router import router as admin_hosts_router
 from app.modules.hosts.router import router as host_router
@@ -39,7 +40,7 @@ if settings.is_production and not settings.turnstile_secret_key:
 
 app = FastAPI(
     title="NearBNB API",
-    version="0.9.0",
+    version="1.0.0",
     docs_url=None if settings.is_production else "/docs",
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
@@ -47,6 +48,21 @@ app = FastAPI(
 
 app.add_exception_handler(AppError, app_error_handler)
 app.middleware("http")(csrf_middleware)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Safe defaults on every answer. The API serves JSON, files and calendars, never pages, so framing and sniffing are off."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+    response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+    # Private answers must never sit in a shared cache. Public images, feeds and docs set their own caching.
+    if request.url.path.startswith("/api/v1") and "cache-control" not in response.headers:
+        response.headers["Cache-Control"] = "no-store"
+    return response
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -62,6 +78,28 @@ api = APIRouter(prefix="/api/v1")
 async def health(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
     await session.execute(text("SELECT 1"))
     return {"status": "ok"}
+
+
+@api.get("/health/ready")
+async def ready(session: AsyncSession = Depends(get_session)):
+    """Deeper check for monitors: database, Redis and whether the database is on the latest migration."""
+    from fastapi.responses import JSONResponse
+
+    from app.core.redis import get_redis
+
+    checks: dict[str, str] = {}
+    try:
+        await session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:
+        checks["database"] = "down"
+    try:
+        await get_redis().ping()
+        checks["redis"] = "ok"
+    except Exception:
+        checks["redis"] = "down"
+    ok = all(v == "ok" for v in checks.values())
+    return JSONResponse(status_code=200 if ok else 503, content={"status": "ok" if ok else "degraded", **checks})
 
 
 api.include_router(auth_router)
@@ -80,6 +118,7 @@ api.include_router(admin_tax_router)
 api.include_router(bookings_router)
 api.include_router(reviews_router)
 api.include_router(issues_router)
+api.include_router(ical_router)
 api.include_router(dashboards_router)
 api.include_router(admin_users_router, dependencies=[Depends(require_admin)])
 api.include_router(cancellations_router)

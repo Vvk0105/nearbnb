@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { fieldLabel, fromCents, money, toCents } from "../../lib/format";
 import type { CalendarData, CancellationTemplate, ListingMeta, PropertyData, UnitData } from "../../lib/types";
+import { CalendarSyncCard } from "../../components/CalendarSync";
 import { describeTiers } from "../../components/CancelBooking";
 import { PhotoManager } from "../../components/PhotoManager";
 import { PlaceInput } from "../../components/PlaceInput";
@@ -498,6 +499,8 @@ export function UnitEditor() {
       <Card title="Availability">
         <BlockCalendar unit={unit} timezone={property.timezone} disabled={unit.status === "archived"} />
       </Card>
+
+      {unit.quantity === 1 && <CalendarSyncCard unitId={unit.id} disabled={unit.status === "archived"} />}
 
       <Card title="Listing status">
         {life.banner}

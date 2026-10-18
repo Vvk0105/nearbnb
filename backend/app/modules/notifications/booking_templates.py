@@ -258,4 +258,24 @@ BOOKING_TEMPLATES: dict[str, tuple[str, str, str]] = {
         "<p>Hi {{ name }},</p><p>Stripe needs more information before it can pay you: <strong>{{ requirements }}</strong>.</p>"
         "<p>Until this is fixed your listings are hidden and payouts wait.</p>" + _button("Fix it now", "/host/payouts"),
     ),
+    "ical_conflict_host": (
+        "Calendar clash: {{ title }}",
+        "Hi {{ name }},\n\nYour {{ source_name }} calendar shows the dates {{ clash_from }} to {{ clash_to }} as taken, but you already have a NearBNB booking on them ({{ booking_status }})." + _DETAILS_TEXT
+        + "\nNothing was cancelled. Please decide which booking to keep and contact the other side if needed. You can cancel the NearBNB booking from your bookings if you must.\n\n{{ url }}/host/requests\n",
+        "<p>Hi {{ name }},</p><p>Your <strong>{{ source_name }}</strong> calendar shows the dates {{ clash_from }} to {{ clash_to }} as taken, but you already have a NearBNB booking on them ({{ booking_status }}).</p>"
+        + _DETAILS_HTML + "<p>Nothing was cancelled. Please decide which booking to keep and contact the other side if needed.</p>" + _button("Open my bookings", "/host/requests"),
+    ),
+    "ical_conflict_admin": (
+        "Calendar clash: {{ reference }} at {{ property }}",
+        "The {{ source_name }} calendar for {{ property }} shows {{ clash_from }} to {{ clash_to }} as taken, but booking {{ reference }} ({{ booking_status }}) is on those dates.\n\n{{ url }}/admin/calendar\n",
+        "<p>The <strong>{{ source_name }}</strong> calendar for {{ property }} shows {{ clash_from }} to {{ clash_to }} as taken, but booking <strong>{{ reference }}</strong> ({{ booking_status }}) is on those dates.</p>"
+        + _button("Open calendar conflicts", "/admin/calendar"),
+    ),
+    "ical_sync_failing": (
+        "Your {{ source_name }} calendar is not syncing",
+        "Hi {{ name }},\n\nWe could not read your {{ source_name }} calendar for {{ unit }} {{ failures }} times in a row.\nLast problem: {{ error }}\n\nUntil it works, dates booked on the other site may not be blocked here. Check the link in your unit's Calendar sync settings.\n\n{{ url }}/host/properties/{{ property_id }}/units/{{ unit_id }}\n",
+        "<p>Hi {{ name }},</p><p>We could not read your <strong>{{ source_name }}</strong> calendar for {{ unit }} {{ failures }} times in a row.</p><p>Last problem: {{ error }}</p>"
+        "<p>Until it works, dates booked on the other site may not be blocked here. Check the link in your unit's Calendar sync settings.</p>"
+        + _button("Open the unit", "/host/properties/{{ property_id }}/units/{{ unit_id }}"),
+    ),
 }

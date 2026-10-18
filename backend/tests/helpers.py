@@ -145,3 +145,17 @@ async def set_location(db, property_id: str, lat: float | None, lng: float | Non
 
     await db.execute(update(Property).where(Property.id == uuid.UUID(property_id)).values(latitude=lat, longitude=lng))
     await db.commit()
+
+
+def all_routes() -> list[tuple[str, str]]:
+    """Every (method, path) the app serves. Newer FastAPI hides included routers behind a lazy wrapper, so look inside it."""
+    from app.main import app
+
+    found = []
+    for r in app.routes:
+        contexts = r.effective_route_contexts() if hasattr(r, "effective_route_contexts") else [r]
+        for c in contexts:
+            methods = getattr(c, "methods", None)
+            if methods and getattr(c, "path", None):
+                found.extend((m, c.path) for m in sorted(set(methods) - {"HEAD", "OPTIONS"}))
+    return found

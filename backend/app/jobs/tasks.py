@@ -8,6 +8,7 @@ from app.jobs.celery_app import celery_app
 from app.modules.auth.models import OtpCode, RefreshToken
 from app.modules.bookings import service as booking_service
 from app.modules.notifications.service import kick_outbox, process_outbox
+from app.modules.ical import service as ical_service
 from app.modules.payments import refunds as refund_service
 from app.modules.payments import service as payment_service
 from app.modules.payouts import service as payout_service
@@ -105,3 +106,17 @@ async def _process_reviews() -> dict[str, int]:
 @celery_app.task(name="reviews.process")
 def process_reviews() -> dict[str, int]:
     return asyncio.run(_process_reviews())
+
+
+async def _sync_calendars() -> dict[str, int]:
+    async with task_session() as session:
+        counts = await ical_service.dispatch_due(session)
+        await session.commit()
+    if counts["synced"] or counts["failed"]:
+        kick_outbox()
+    return counts
+
+
+@celery_app.task(name="ical.dispatch")
+def sync_calendars() -> dict[str, int]:
+    return asyncio.run(_sync_calendars())

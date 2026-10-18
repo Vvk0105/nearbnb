@@ -1,9 +1,9 @@
 from app.jobs.celery_app import ping
-from app.main import app
+from tests.helpers import all_routes
 
 
 def test_health_route_registered():
-    paths = {route.path for route in app.routes}
+    paths = {path for _, path in all_routes()}
     assert "/api/v1/health" in paths
 
 

@@ -6,6 +6,7 @@ from app.modules.hosts.models import HostDocument, HostProfile, HostSettingOverr
 from app.modules.legal.models import LegalDocument  # noqa: F401
 from app.modules.payments.models import Invoice, Payment, Refund, RefundRequest, StripeEvent  # noqa: F401
 from app.modules.cancellations.models import CancellationTemplate  # noqa: F401
+from app.modules.ical.models import IcalConflict, IcalExport, IcalSource  # noqa: F401
 from app.modules.issues.models import Issue  # noqa: F401
 from app.modules.reviews.models import Review  # noqa: F401
 from app.modules.payouts.models import PayoutRecord, Transfer  # noqa: F401

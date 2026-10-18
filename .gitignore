@@ -13,3 +13,6 @@ storage/
 
 # Celery beat runtime state
 celerybeat-schedule*
+
+# database backups contain personal data
+backups/

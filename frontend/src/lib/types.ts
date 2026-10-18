@@ -261,3 +261,14 @@ export type AdminIssueRow = IssueItem & {
   admin_note: string | null; blocks_payout: boolean; updated_at: string; resolved_at: string | null; booking_status: string;
   reporter: { name: string; email: string }; guest: { name: string; email: string }; host: { name: string; email: string };
 };
+
+// ---- calendar sync (Phase 9) ----
+export type IcalSourceRow = {
+  id: string; unit_id: string; name: string; url: string; checkin_time: string; checkout_time: string; active: boolean;
+  last_synced_at: string | null; last_attempt_at: string | null; last_error: string | null; events_count: number; failing: boolean;
+};
+export type IcalConflictRow = {
+  id: string; unit_id: string; source: string; status: string; reference: string; booking_id: string; booking_status: string; property: string;
+  booking_from: string; booking_to: string; clash_from: string; clash_to: string; detected_at: string; resolved_at: string | null; note: string | null;
+};
+export type IcalUnitState = { eligible: boolean; reason: string | null; sources: IcalSourceRow[]; export_path: string | null; max_sources: number; conflicts: IcalConflictRow[] };

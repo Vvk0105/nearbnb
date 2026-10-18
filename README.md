@@ -175,6 +175,26 @@ With this phase an admin can run the whole flow (applications, listings, booking
 - **Jobs:** reminders run with the existing minute job; invitations, review reminders and publishing run every 15 minutes.
 - The admin dashboard shows the number of open problems.
 
+## What exists after Phase 9
+
+- **Read other sites' calendars (import):** on a single-room unit a host connects up to 3 iCal links (Airbnb, Booking.com, etc.). Every 5 minutes (Settings: `ical.poll_minutes`) we read each link and block those dates here. Other sites only know whole days, so blocks run from a check-in time to a check-out time the host sets (default 15:00 to 11:00, in the property's time zone). If a link breaks, the dates already blocked stay blocked; after 5 failures in a row the host and admin are emailed.
+- **Share our calendar (export):** each unit has a private link (secret token, can be replaced) that lists confirmed bookings and the host's own blocks as "Not available", rounded out to whole days. It never contains guest details and never re-exports blocks imported from other sites.
+- **Conflicts:** if another site takes dates that already have a NearBnB booking, nothing is cancelled. A conflict is opened, the host and admin are emailed, and a person decides. It closes by itself when the dates stop clashing, or the host/admin can mark it dealt with. Admin > Calendar lists open conflicts and calendars that are failing.
+- **Safe fetching:** only http/https on ports 80/443, no logins in the link, every address the host name resolves to must be public (blocks internal/private addresses), redirects are re-checked, 2 MB size cap, and the response must be a calendar.
+- **Host screen:** unit page > Calendar sync (link to copy, connected calendars, Sync now, Pause, Disconnect, conflicts).
+
+## What exists after Phase 10 (hardening)
+
+- **Security sweep:** a test walks every route in the app: strangers get 401/403 everywhere except an explicit public list, a plain guest gets 403 on every admin route, and every unsafe request with a session needs the CSRF token. A new endpoint that forgets its login check fails the build. Browser security headers are added to every answer.
+- **Dependency audit:** Python packages with known problems (Pillow, Starlette via FastAPI, Jinja2, PyJWT, python-multipart, pytest) were upgraded; `pip-audit` is clean. See [docs/04_SECURITY_REVIEW.md](docs/04_SECURITY_REVIEW.md) for the frontend finding and the honest list of limits.
+- **Health:** `/api/v1/health` (up) and `/api/v1/health/ready` (database and Redis, 503 when degraded) for uptime monitors.
+- **Backups:** `ops/backup.sh` (verified dump, keeps 14) and `ops/restore_drill.sh` (restores into a scratch database and compares counts). The drill passed locally.
+- **Load script:** `ops/loadtest.py`.
+- **Email check:** `python -m app.tools.email_check <domain> --selector <s> --send <you@example.com>` checks SPF, DKIM and DMARC and sends a real test email.
+- **Full-journey test:** `backend/tests/test_journey.py` runs one booking from request to payment, payout, completion and published reviews through the API.
+- **Runbooks:** [docs/05_OPERATIONS.md](docs/05_OPERATIONS.md) (backups, restore, deploy, what to do when things break) and [docs/06_GO_LIVE_CHECKLIST.md](docs/06_GO_LIVE_CHECKLIST.md) (accounts, email, browser pass, the controlled real-money test and the Definition of Done map).
+- **Not done here:** browser (Playwright) tests, anything needing the live domain or live Stripe keys, and the real-money test. These are on the go-live checklist.
+
 ## Production
 
 See [docs/03_SERVER_SETUP.md](docs/03_SERVER_SETUP.md). Frontend goes to Vercel (`frontend/vercel.json`, `frontend/.env.example`); the API runs on the server behind Caddy (`Caddyfile`, `docker-compose.prod.yml`).
