@@ -148,7 +148,7 @@ function PasswordCard() {
       >
         {banner}
         <Field id="cur" label="Current password" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} />
-        <Field id="new" label="New password" type="password" autoComplete="new-password" minLength={10} required value={next} onChange={(e) => setNext(e.target.value)} hint="At least 10 characters" />
+        <Field id="new" label="New password" type="password" autoComplete="new-password" minLength={10} required value={next} onChange={(e) => setNext(e.target.value)} hint="At least 10 characters, with a lowercase letter, an uppercase letter and a number" />
         <Button type="submit" loading={busy}>
           Change password
         </Button>

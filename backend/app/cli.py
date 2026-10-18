@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from email_validator import EmailNotValidError, validate_email
 
 from app.core.db import task_session
-from app.core.security import hash_password
+from app.core.security import hash_password, password_problem
 from app.modules.auth.service import get_user_by_email, normalize_email
 from app.modules.legal import service as legal
 from app.modules.cancellations.service import seed_templates
@@ -28,8 +28,9 @@ async def seed() -> None:
 
 
 async def create_admin(email: str, name: str, password: str) -> None:
-    if len(password) < 10:
-        raise SystemExit("Password must be at least 10 characters.")
+    problem = password_problem(password, email)
+    if problem:
+        raise SystemExit(f"{problem}.")
     try:  # same rules as the login form, so an admin can never be created that cannot log in
         email = validate_email(email, check_deliverability=False).normalized
     except EmailNotValidError as exc:

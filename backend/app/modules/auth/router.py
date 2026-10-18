@@ -13,7 +13,7 @@ from app.core.db import get_session
 from app.core.deps import get_current_user, require_admin
 from app.core.errors import AppError
 from app.core.ratelimit import client_ip, cooldown, rate_limit
-from app.core.security import hash_password, hash_token, verify_password
+from app.core.security import hash_password, hash_token, password_problem, verify_password
 from app.core.turnstile import verify_turnstile
 from app.modules.audit import service as audit
 from app.modules.auth import service
@@ -27,13 +27,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _check_password_strength(password: str, email: str) -> None:
-    minimum = get_settings().password_min_length
-    if len(password) < minimum:
-        raise AppError(422, "WEAK_PASSWORD", f"Password must be at least {minimum} characters")
-    if len(password) > 128:
-        raise AppError(422, "WEAK_PASSWORD", "Password must be at most 128 characters")
-    if password.lower() == email.lower():
-        raise AppError(422, "WEAK_PASSWORD", "Password cannot be the same as your email")
+    problem = password_problem(password, email, get_settings().password_min_length)
+    if problem:
+        raise AppError(422, "WEAK_PASSWORD", problem)
 
 
 class RegisterIn(BaseModel):

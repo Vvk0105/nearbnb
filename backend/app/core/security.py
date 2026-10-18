@@ -67,3 +67,28 @@ def decode_access_token(token: str) -> dict:
     if payload.get("typ") != "access":
         raise AppError(401, "NOT_AUTHENTICATED", "Invalid token")
     return payload
+
+
+COMMON_PASSWORDS = {
+    "password", "password1", "password12", "password123", "password1234", "passw0rd123", "p@ssword123",
+    "qwertyuiop", "qwerty12345", "qwerty123456", "1234567890", "12345678910", "123456789012", "1q2w3e4r5t",
+    "iloveyou123", "welcome123", "welcome1234", "admin12345", "administrator", "letmein1234", "changeme123",
+    "abcdefghij", "abc1234567", "nearbnb1234", "nearbnb123",
+}
+
+
+def password_problem(password: str, email: str = "", minimum: int = 10) -> str | None:
+    """Returns what is wrong with a password, or None when it is acceptable. One rule for sign-up, reset, change and the admin CLI."""
+    if len(password) < minimum:
+        return f"Password must be at least {minimum} characters"
+    if len(password) > 128:
+        return "Password must be at most 128 characters"
+    if not (any(c.islower() for c in password) and any(c.isupper() for c in password) and any(c.isdigit() for c in password)):
+        return "Password needs a lowercase letter, an uppercase letter and a number"
+    squashed = "".join(c for c in password.lower() if c.isalnum())
+    if squashed in COMMON_PASSWORDS or len(set(password)) < 5:
+        return "That password is too common or too repetitive. Choose something less guessable"
+    local = email.lower().split("@")[0]
+    if email and (password.lower() == email.lower() or (len(local) >= 4 and local in password.lower())):
+        return "Password cannot contain your email name"
+    return None

@@ -106,7 +106,7 @@ export function RegisterPage() {
         {error && <Alert>{error}</Alert>}
         <Field id="name" label="Full name" autoComplete="name" required value={form.full_name} onChange={set("full_name")} />
         <Field id="email" label="Email" type="email" autoComplete="email" required value={form.email} onChange={set("email")} />
-        <Field id="password" label="Password" type="password" autoComplete="new-password" minLength={10} required value={form.password} onChange={set("password")} hint="At least 10 characters" />
+        <Field id="password" label="Password" type="password" autoComplete="new-password" minLength={10} required value={form.password} onChange={set("password")} hint="At least 10 characters, with a lowercase letter, an uppercase letter and a number" />
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" className="mt-1" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} required />
           <span>
@@ -258,7 +258,7 @@ export function ResetPasswordPage() {
         {error && <Alert>{error}</Alert>}
         <Field id="email" label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field id="code" label="Reset code" inputMode="numeric" maxLength={6} required value={code} onChange={(e) => setCode(e.target.value)} />
-        <Field id="password" label="New password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} hint="At least 10 characters" />
+        <Field id="password" label="New password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} hint="At least 10 characters, with a lowercase letter, an uppercase letter and a number" />
         <Button type="submit" loading={busy}>
           Reset password
         </Button>
