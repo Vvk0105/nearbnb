@@ -150,6 +150,21 @@ async def host_dashboard(session: AsyncSession, host: HostProfile) -> dict:
 
 # ---------- admin: dashboard ----------
 
+async def _daily_trend(session: AsyncSession, now: datetime, days: int = 30) -> list[dict]:
+    """One row per UTC day for the last `days` days (zeros included, so a chart has no gaps): requests made and money paid."""
+    start = (now - timedelta(days=days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    day_b = func.date(func.timezone("UTC", Booking.requested_at))
+    booked = dict((await session.execute(select(day_b, func.count()).where(Booking.requested_at >= start).group_by(day_b))).all())
+    day_p = func.date(func.timezone("UTC", Payment.succeeded_at))
+    paid = dict((await session.execute(select(day_p, func.coalesce(func.sum(Payment.amount), 0))
+                                       .where(Payment.status == "succeeded", Payment.succeeded_at >= start).group_by(day_p))).all())
+    out = []
+    for i in range(days):
+        d = (start + timedelta(days=i)).date()
+        out.append({"date": d.isoformat(), "bookings": int(booked.get(d, 0)), "paid": int(paid.get(d, 0))})
+    return out
+
+
 async def admin_dashboard(session: AsyncSession) -> dict:
     now = _now()
     week_ago, month_ago = now - timedelta(days=7), now - timedelta(days=30)
@@ -185,7 +200,9 @@ async def admin_dashboard(session: AsyncSession) -> dict:
         ("suspended_users", "Suspended users", await count(User, User.status == "suspended"), "/admin/users", "info"),
     ]
     recent = (await session.execute(select(AuditLog, User.email).join(User, User.id == AuditLog.actor_id, isouter=True).order_by(AuditLog.id.desc()).limit(8))).all()
+    trend = await _daily_trend(session, now)
     return {
+        "trend": trend,
         "alerts": [{"key": k, "label": label, "count": n, "href": href, "severity": sev if n else "none"} for k, label, n, href, sev in alerts],
         "bookings": {
             "requests_waiting": await count(Booking, Booking.status == B_REQUESTED),

@@ -92,7 +92,7 @@ export function Layout() {
 }
 
 /** Blocks the app until the user accepts newly published Terms / Privacy versions. */
-function ConsentGate({ user }: { user: User }) {
+export function ConsentGate({ user }: { user: User }) {
   const { setUser } = useAuth();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);

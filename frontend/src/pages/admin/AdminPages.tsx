@@ -1,40 +1,8 @@
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import type { AuditEntry, SettingItem } from "../../lib/types";
 import { Alert, Button, Card, Field, errorMessage } from "../../components/ui";
-
-export function AdminLayout() {
-  const tab = ({ isActive }: { isActive: boolean }) =>
-    `rounded-lg px-3 py-1.5 text-sm ${isActive ? "bg-brand-600 text-white" : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"}`;
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <NavLink to="/admin" end className={tab}>Dashboard</NavLink>
-        <NavLink to="/admin/hosts" className={tab}>Hosts</NavLink>
-        <NavLink to="/admin/users" className={tab}>Users</NavLink>
-        <NavLink to="/admin/listings" className={tab}>Listings</NavLink>
-        <NavLink to="/admin/bookings" className={tab}>Bookings</NavLink>
-        <NavLink to="/admin/issues" className={tab}>Issues</NavLink>
-        <NavLink to="/admin/reviews" className={tab}>Reviews</NavLink>
-        <NavLink to="/admin/calendar" className={tab}>Calendar</NavLink>
-        <NavLink to="/admin/payments" className={tab}>Payments</NavLink>
-        <NavLink to="/admin/payouts" className={tab}>Payouts</NavLink>
-        <NavLink to="/admin/refunds" className={tab}>Refunds</NavLink>
-        <NavLink to="/admin/cancellation" className={tab}>Cancellation</NavLink>
-        <NavLink to="/admin/settings" className={tab}>Settings</NavLink>
-        <NavLink to="/admin/catalogues" className={tab}>Types &amp; amenities</NavLink>
-        <NavLink to="/admin/tax" className={tab}>Tax</NavLink>
-        <NavLink to="/admin/legal" className={tab}>Legal documents</NavLink>
-        <NavLink to="/admin/audit" className={tab}>Audit log</NavLink>
-        <NavLink to="/admin/webhooks" className={tab}>Webhooks</NavLink>
-        <NavLink to="/admin/exports" className={tab}>Exports</NavLink>
-      </div>
-      <Outlet />
-    </div>
-  );
-}
 
 function parseInput(item: SettingItem, text: string): unknown {
   switch (item.type) {

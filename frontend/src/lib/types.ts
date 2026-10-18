@@ -215,6 +215,7 @@ export type HostDashboardData = {
 export type AdminAlert = { key: string; label: string; count: number; href: string; severity: "none" | "info" | "action" | "problem" };
 export type AdminDashboardData = {
   alerts: AdminAlert[];
+  trend?: { date: string; bookings: number; paid: number }[];
   bookings: { requests_waiting: number; awaiting_payment: number; upcoming: number; in_progress: number; completed_30_days: number; cancelled_30_days: number };
   money_30_days: { gross_paid: number; refunded: number; net_collected: number; service_fees: number; commission: number };
   totals: { users: number; hosts: number; properties: number };

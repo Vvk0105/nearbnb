@@ -393,3 +393,14 @@ async def test_text_that_a_spreadsheet_would_run_as_a_formula_is_neutralised(new
     assert b["guest_name"].startswith("'=HYPERLINK") and b["closed_reason"].startswith("'+cmd") and b["property"] == "'@SUM(1+1)"
     host_rows = parse(await w.host.get(f"{API}/host/money/export.csv"))
     assert host_rows[1][1] == "'@SUM(1+1)"
+
+
+async def test_the_dashboard_trend_has_one_row_per_day_with_todays_bookings_and_money(new_client, make_admin, db, spy):
+    from datetime import UTC, datetime
+
+    w = await paid_world(new_client, make_admin)
+    trend = (await get(w.admin, "/admin/dashboard"))["trend"]
+    assert len(trend) == 30 and trend[-1]["date"] == datetime.now(UTC).date().isoformat()
+    assert [t["date"] for t in trend] == sorted(t["date"] for t in trend)
+    assert trend[-1]["bookings"] == 1 and trend[-1]["paid"] == 29563
+    assert sum(t["bookings"] for t in trend[:-1]) == 0 and sum(t["paid"] for t in trend[:-1]) == 0

@@ -19,7 +19,8 @@ import { AdminUserDetailPage, AdminUsersPage } from "./pages/admin/AdminUsersPag
 import { MoneyPage } from "./pages/host/MoneyPage";
 import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
-import { AdminLayout, AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
+import { AdminLayout } from "./components/AdminShell";
+import { AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
 import { TaxRulesPage } from "./pages/admin/AdminTaxPage";
 import { CataloguesPage, ListingDetailPage, ListingsPage } from "./pages/admin/AdminListingPages";
@@ -57,35 +58,36 @@ export default function App() {
           <Route path="host/properties/:propertyId/units/:unitId" element={<UnitEditor />} />
         </Route>
 
-        <Route element={<RequireAdmin />}>
-          <Route path="admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="hosts" element={<HostsListPage />} />
-            <Route path="hosts/:hostId" element={<HostDetailPage />} />
-            <Route path="bookings" element={<AdminBookingsPage />} />
-            <Route path="bookings/:bookingId" element={<AdminBookingDetailPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="users/:userId" element={<AdminUserDetailPage />} />
-            <Route path="payments" element={<AdminPaymentsPage />} />
-            <Route path="payouts" element={<AdminPayoutsPage />} />
-            <Route path="calendar" element={<AdminCalendarPage />} />
-            <Route path="reviews" element={<AdminReviewsPage />} />
-            <Route path="issues" element={<AdminIssuesPage />} />
-            <Route path="webhooks" element={<AdminWebhooksPage />} />
-            <Route path="exports" element={<AdminExportsPage />} />
-            <Route path="refunds" element={<AdminRefundsPage />} />
-            <Route path="cancellation" element={<AdminCancellationPage />} />
-            <Route path="listings" element={<ListingsPage />} />
-            <Route path="listings/:propertyId" element={<ListingDetailPage />} />
-            <Route path="catalogues" element={<CataloguesPage />} />
-            <Route path="tax" element={<TaxRulesPage />} />
-            <Route path="legal" element={<LegalAdminPage />} />
-            <Route path="audit" element={<AuditPage />} />
-          </Route>
-        </Route>
-
         <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+
+      <Route element={<RequireAdmin />}>
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="hosts" element={<HostsListPage />} />
+          <Route path="hosts/:hostId" element={<HostDetailPage />} />
+          <Route path="bookings" element={<AdminBookingsPage />} />
+          <Route path="bookings/:bookingId" element={<AdminBookingDetailPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/:userId" element={<AdminUserDetailPage />} />
+          <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="payouts" element={<AdminPayoutsPage />} />
+          <Route path="calendar" element={<AdminCalendarPage />} />
+          <Route path="reviews" element={<AdminReviewsPage />} />
+          <Route path="issues" element={<AdminIssuesPage />} />
+          <Route path="webhooks" element={<AdminWebhooksPage />} />
+          <Route path="exports" element={<AdminExportsPage />} />
+          <Route path="refunds" element={<AdminRefundsPage />} />
+          <Route path="cancellation" element={<AdminCancellationPage />} />
+          <Route path="listings" element={<ListingsPage />} />
+          <Route path="listings/:propertyId" element={<ListingDetailPage />} />
+          <Route path="catalogues" element={<CataloguesPage />} />
+          <Route path="tax" element={<TaxRulesPage />} />
+          <Route path="legal" element={<LegalAdminPage />} />
+          <Route path="audit" element={<AuditPage />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Route>
       </Route>
     </Routes>
   );
