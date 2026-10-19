@@ -13,6 +13,9 @@ services:
       -c work_mem=4MB
       -c maintenance_work_mem=64MB
       -c max_connections=40
+    # Reachable only from this server itself (127.0.0.1), never from the internet. DBeaver connects through an SSH tunnel.
+    ports:
+      - "127.0.0.1:15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     mem_limit: 450m
