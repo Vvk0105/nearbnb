@@ -26,8 +26,9 @@ const dashboard = {
 };
 
 function open(state: string, path = "/host") {
-  vi.stubGlobal("fetch", (url: string) => {
+  vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
     if (url.endsWith("/v1/me")) return json(200, me);
+    if (url.endsWith("/v1/host/apply") && init?.method === "POST") { state = "draft"; return json(200, hostInfo("draft")); }
     if (url.endsWith("/v1/host")) return json(200, hostInfo(state));
     if (url.endsWith("/v1/host/dashboard")) return json(200, dashboard);
     return json(404, { error: { code: "NOT_FOUND", message: "not found" } });
@@ -40,6 +41,12 @@ function open(state: string, path = "/host") {
 }
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+/** Opens the account menu in the top bar and checks it holds the named item. */
+async function menuItem(name: string) {
+  await userEvent.setup().click(await within(screen.getByRole("banner")).findByRole("button", { name: "Account menu" }));
+  await waitFor(() => expect(within(screen.getByRole("banner")).getByRole("menuitem", { name })).toBeTruthy());
+}
 
 describe("host area shell", () => {
   it("names pages from the address", () => {
@@ -82,5 +89,45 @@ describe("host area shell", () => {
     const dialog = screen.getByRole("dialog", { name: "Host menu" });
     await u.click(within(dialog).getByRole("link", { name: /^Earnings/ }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Host menu" })).toBeNull());
+  });
+
+  it("shows a guest who has never hosted the public Become a host page, with no host sidebar", async () => {
+    open("none");
+    expect(await screen.findByRole("heading", { level: 1, name: "Become a host" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Host" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Start application" })).toBeTruthy();
+    await menuItem("Become a host");                                                          // the account menu says so too
+  });
+
+  it("starting the application shows the person their application, still on the public site", async () => {
+    const u = userEvent.setup();
+    open("none");
+    await u.click(await screen.findByRole("button", { name: "Start application" }));
+    await menuItem("My application");
+    expect(screen.queryByRole("navigation", { name: "Host" })).toBeNull();
+  });
+
+  it("calls the top menu link Host once someone is a host", async () => {
+    open("active", "/");
+    await menuItem("Host");
+    expect(screen.queryByRole("menuitem", { name: "Become a host" })).toBeNull();
+  });
+
+  it("keeps an applicant on the public site: their application page, no host sidebar, no dashboard", async () => {
+    open("draft");
+    expect(await screen.findByRole("heading", { level: 1, name: "Your host application" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Setup progress" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Host" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Overview" })).toBeNull();
+    await menuItem("My application");
+  });
+
+  it("adds properties and payout setup once approved, but not requests or earnings", async () => {
+    open("approved");
+    const nav = await screen.findByRole("navigation", { name: "Host" });
+    expect(within(nav).getByRole("link", { name: "Properties" })).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Payout setup" })).toBeTruthy();
+    expect(within(nav).queryByRole("link", { name: /Booking requests/ })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: "Earnings" })).toBeNull();
   });
 });

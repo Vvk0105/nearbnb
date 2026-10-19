@@ -7,6 +7,7 @@ import type { ListingMeta, SearchResult } from "../lib/types";
 import { PropertyCard } from "../components/PropertyCard";
 import { SearchBar, readSearch, searchToParams, type SearchValues } from "../components/SearchBar";
 import { Alert, Button, Card, Field, Select, errorMessage } from "../components/ui";
+import { EmptyState } from "../components/dashboardUi";
 
 const PAGE_SIZE = 12;
 
@@ -65,7 +66,7 @@ export default function SearchPage() {
     <div className="space-y-6">
       <SearchBar key={params.toString().replace(/&?(page|sort)=[^&]*/g, "")} initial={values} onSearch={onSearch} compact />
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card title="Filters">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
@@ -92,7 +93,7 @@ export default function SearchPage() {
         <section aria-busy={isFetching}>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold">{data ? `${data.total} place${data.total === 1 ? "" : "s"}` : "Searching..."}{values.q && ` for “${values.q}”`}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{data ? `${data.total} place${data.total === 1 ? "" : "s"}` : "Searching..."}{values.q && ` for “${values.q}”`}</h1>
               {values.date && <p className="text-sm text-gray-600">Check-in {dayLabel(values.date)}, {timeLabel(values.time)} · {Number(values.nights) * 24} hours · {values.guests} guest{values.guests === "1" ? "" : "s"}</p>}
             </div>
             <div className="w-48">
@@ -108,7 +109,17 @@ export default function SearchPage() {
           {error && <Alert>{errorMessage(error)}</Alert>}
           {data?.hint && data.total === 0 && <Alert kind="info">{data.hint}</Alert>}
           {data && data.total === 0 && !data.hint && (
-            <Card><p className="text-sm text-gray-600">Nothing matches. Try different dates, fewer filters, or a wider area.</p></Card>
+            <EmptyState icon="search" title="Nothing matches yet">Try different dates, fewer filters, or a wider area.</EmptyState>
+          )}
+          {!data && !error && (
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="aspect-[4/3] bg-slate-200" />
+                  <div className="space-y-2 p-4"><div className="h-4 w-2/3 rounded bg-slate-200" /><div className="h-3 w-1/2 rounded bg-slate-100" /><div className="h-4 w-1/3 rounded bg-slate-200" /></div>
+                </div>
+              ))}
+            </div>
           )}
           <div className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-3 ${isFetching ? "opacity-70" : ""}`}>
             {data?.items.map((item) => <PropertyCard key={item.id} item={item} carry={carry.toString()} />)}

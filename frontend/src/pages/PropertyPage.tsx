@@ -3,32 +3,13 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, mediaUrl } from "../lib/api";
 import { money } from "../lib/format";
-import type { Photo, PublicProperty, PublicUnit } from "../lib/types";
+import type { PublicProperty, PublicUnit } from "../lib/types";
 import { AvailabilityPanel } from "../components/availability/AvailabilityPanel";
 import { describeTiers } from "../components/CancelBooking";
 import { PropertyReviews, RatingSummary } from "../components/Reviews";
 import { Alert, Card } from "../components/ui";
-
-function Gallery({ photos, name }: { photos: Photo[]; name: string }) {
-  const [index, setIndex] = useState(0);
-  if (photos.length === 0) return <div className="flex aspect-[16/7] items-center justify-center rounded-2xl bg-gray-100 text-gray-400">No photos yet</div>;
-  const current = photos[Math.min(index, photos.length - 1)];
-  return (
-    <div className="space-y-2">
-      <img src={mediaUrl(current.url)} alt={`${name}, photo ${index + 1} of ${photos.length}`} className="aspect-[16/8] w-full rounded-2xl object-cover" />
-      {photos.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {photos.map((p, i) => (
-            <button key={p.id} type="button" onClick={() => setIndex(i)} aria-label={`Show photo ${i + 1}`} aria-current={i === index}
-              className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 ${i === index ? "border-brand-600" : "border-transparent opacity-80 hover:opacity-100"}`}>
-              <img src={mediaUrl(p.thumb_url)} alt="" className="h-full w-full object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { Gallery } from "../components/Gallery";
+import { Icon } from "../components/icons";
 
 function UnitCard({ unit, timezone, open, onToggle, initial }: { unit: PublicUnit; timezone: string; open: boolean; onToggle: () => void; initial: { date?: string; time?: string; nights?: number; guests?: number } }) {
   const facts = [`Sleeps ${unit.capacity}`, unit.bedrooms != null && `${unit.bedrooms} bedroom${unit.bedrooms === 1 ? "" : "s"}`,
@@ -82,13 +63,14 @@ export default function PropertyPage() {
     );
   }
   if (!data) return null;
+  const minPrice = data.units.length ? Math.min(...data.units.map((u) => u.price_per_24h)) : 0;
   const autoOpen = opened ?? (data.units.length === 1 || initial.date ? data.units[0].id : null);
 
   return (
     <div className="space-y-8">
       <div>
         <Link to="/search" className="text-sm text-brand-700 hover:underline">← Search</Link>
-        <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{data.name}</h1>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">{data.name}</h1>
         {data.rating && <p className="mt-1"><RatingSummary average={data.rating.average} count={data.rating.count} /></p>}
         <p className="text-gray-600">{[data.type_name, [data.suburb, data.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")} · Hosted by {data.host_first_name}</p>
       </div>
@@ -106,9 +88,21 @@ export default function PropertyPage() {
             </section>
           )}
         </div>
-        <Alert kind="info">The exact address and check-in instructions are shared after your booking is confirmed.</Alert>
+        <aside className="lg:sticky lg:top-24 lg:self-start">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm text-slate-500">{data.units.length > 1 ? "From" : "Price"}</p>
+            <p className="-mt-3"><span className="text-3xl font-bold">{money(minPrice, data.units[0]?.currency ?? "AUD")}</span> <span className="text-slate-500">/ 24 hours</span></p>
+            <a href="#availability" className="block rounded-lg bg-brand-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-700">Check availability</a>
+            <ul className="space-y-2 border-t border-slate-100 pt-4 text-sm text-slate-600">
+              <li className="flex gap-2"><Icon name="host" className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Your host: {data.host_first_name}</li>
+              <li className="flex gap-2"><Icon name="calendar" className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Check in at the hour you choose</li>
+              <li className="flex gap-2"><Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> You pay only after the host accepts</li>
+            </ul>
+            <Alert kind="info">The exact address and check-in instructions are shared after your booking is confirmed.</Alert>
+          </div>
+        </aside>
       </div>
-      <section className="space-y-4">
+      <section id="availability" className="scroll-mt-24 space-y-4">
         <h2 className="text-xl font-bold">{data.units.length > 1 ? "Choose where to stay" : "Availability and price"}</h2>
         {data.units.map((u) => (
           <UnitCard key={u.id} unit={u} timezone={data.timezone} open={autoOpen === u.id} onToggle={() => setOpened(autoOpen === u.id ? "" : u.id)} initial={initial} />

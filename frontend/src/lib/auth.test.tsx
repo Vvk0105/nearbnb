@@ -73,7 +73,8 @@ describe("login and logout update the screen without a page refresh", () => {
     renderApp();
     await waitFor(() => expect(header().getByRole("link", { name: "Log in" })).toBeTruthy());
     await logIn("alice@example.com");
-    await waitFor(() => expect(header().getByRole("link", { name: "Alice Guest" })).toBeTruthy());
+    await waitFor(() => expect(header().getByRole("button", { name: "Account menu" })).toBeTruthy());
+    expect(header().getByText("Alice Guest")).toBeTruthy();
     expect(header().queryByRole("link", { name: "Log in" })).toBeNull();
   });
 
@@ -81,7 +82,8 @@ describe("login and logout update the screen without a page refresh", () => {
     renderApp();
     await logIn("alice@example.com");
     const user = userEvent.setup();
-    await user.click(await header().findByRole("button", { name: "Log out" }));
+    await user.click(await header().findByRole("button", { name: "Account menu" }));
+    await user.click(await header().findByRole("menuitem", { name: "Log out" }));
     await waitFor(() => expect(header().getByRole("link", { name: "Log in" })).toBeTruthy());
     expect(header().queryByText("Alice Guest")).toBeNull();
     expect(screen.getByRole("heading", { name: "Log in" })).toBeTruthy();
@@ -91,11 +93,12 @@ describe("login and logout update the screen without a page refresh", () => {
     renderApp();
     await logIn("alice@example.com");
     const user = userEvent.setup();
-    await user.click(await header().findByRole("button", { name: "Log out" }));
+    await user.click(await header().findByRole("button", { name: "Account menu" }));
+    await user.click(await header().findByRole("menuitem", { name: "Log out" }));
     await waitFor(() => expect(header().getByRole("link", { name: "Log in" })).toBeTruthy());
 
     await logIn("bob@example.com");
-    await waitFor(() => expect(header().getByRole("link", { name: "Bob Other" })).toBeTruthy());
+    await waitFor(() => expect(header().getByText("Bob Other")).toBeTruthy());
     expect(header().queryByText("Alice Guest")).toBeNull();
   });
 

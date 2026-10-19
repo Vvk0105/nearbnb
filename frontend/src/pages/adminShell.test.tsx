@@ -99,6 +99,6 @@ describe("admin shell", () => {
   it("keeps non-admins out", async () => {
     open(false);
     await waitFor(() => expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull());
-    expect(await screen.findByText(/Near/)).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: /Find a place for exactly the time you need/ })).toBeTruthy();
   });
 });

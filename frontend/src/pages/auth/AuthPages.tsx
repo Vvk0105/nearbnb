@@ -3,13 +3,39 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { User } from "../../lib/types";
-import { Alert, Button, Card, Field, errorMessage } from "../../components/ui";
+import { Alert, Button, Field, errorMessage } from "../../components/ui";
+import { Icon } from "../../components/icons";
 import { Turnstile } from "../../components/Turnstile";
 
+const PERKS = [
+  "Check in at the hour that suits you",
+  "See real availability before you ask",
+  "Secure card payments through Stripe",
+  "Honest, two-sided reviews",
+];
+
+/** Login-style pages: a short pitch on the left (large screens) and the form on the right. */
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-md">
-      <Card title={title}>{children}</Card>
+    <div className="mx-auto grid max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
+      <aside aria-hidden="true" className="relative hidden flex-col justify-between bg-gradient-to-br from-slate-900 via-brand-900 to-brand-700 p-10 text-white lg:flex">
+        <div>
+          <p className="text-2xl font-extrabold tracking-tight">Near<span className="text-brand-300">BnB</span></p>
+          <p className="mt-6 text-3xl font-bold leading-tight">Stay exactly as long as you need.</p>
+        </div>
+        <ul className="space-y-3 text-sm text-brand-50">
+          {PERKS.map((p) => (
+            <li key={p} className="flex items-center gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15"><Icon name="check" className="h-3.5 w-3.5" /></span>
+              {p}
+            </li>
+          ))}
+        </ul>
+      </aside>
+      <div className="p-6 sm:p-10">
+        <h1 className="mb-6 text-2xl font-bold tracking-tight">{title}</h1>
+        {children}
+      </div>
     </div>
   );
 }

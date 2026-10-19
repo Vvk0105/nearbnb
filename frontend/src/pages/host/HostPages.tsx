@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { label } from "../../lib/format";
 import type { BookingList, HostInfo } from "../../lib/types";
 import { HostDashboard } from "../../components/HostDashboard";
+import { BecomeHost } from "./BecomeHost";
 import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
 
 export function useHost() {
@@ -45,33 +46,7 @@ export function HostHome() {
   const [error, setError] = useState("");
   if (loading || !host) return <p className="text-gray-500">Loading...</p>;
 
-  const start = async () => {
-    try {
-      await api("/host/apply", { method: "POST" });
-      navigate("/host/apply");
-    } catch (e) {
-      setError(errorMessage(e));
-    }
-  };
-
-  if (host.state === "none") {
-    return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <h1 className="text-2xl font-bold">Become a host</h1>
-        <Card>
-          <p className="text-sm text-gray-700">Hosting on NearBNB takes four steps:</p>
-          <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-gray-700">
-            <li>Fill in a short application and upload a government ID.</li>
-            <li>Our team reviews it.</li>
-            <li>Connect a payout account (through Stripe) so we can pay you.</li>
-            <li>Add your property and rooms. We approve each listing before it goes live.</li>
-          </ol>
-          {error && <div className="mt-4"><Alert>{error}</Alert></div>}
-          <div className="mt-5"><Button onClick={start}>Start application</Button></div>
-        </Card>
-      </div>
-    );
-  }
+  if (host.state === "none") return <BecomeHost />;
 
   const next: Record<string, { text: string; to: string; cta: string }> = {
     draft: { text: "Finish your application and submit it for review.", to: "/host/apply", cta: "Continue application" },
@@ -88,7 +63,7 @@ export function HostHome() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Host dashboard</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{host.state === "active" ? "Host dashboard" : host.state === "approved" || host.state === "restricted" ? "Finish setting up" : "Your host application"}</h1>
         <StatusBadge status={host.state} />
       </div>
       <Steps host={host} />
