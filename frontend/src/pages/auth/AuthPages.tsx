@@ -49,6 +49,7 @@ export function LoginPage() {
   const [totp, setTotp] = useState("");
   const [needTotp, setNeedTotp] = useState(false);
   const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0); // a CAPTCHA answer works once, so a fresh one is shown after every try
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -72,6 +73,8 @@ export function LoginPage() {
         setError(errorMessage(err));
       }
     } finally {
+      setCaptcha(null);
+      setCaptchaKey((k) => k + 1);
       setBusy(false);
     }
   };
@@ -85,7 +88,7 @@ export function LoginPage() {
         {needTotp && (
           <Field id="totp" label="Authentication code" inputMode="numeric" maxLength={6} autoFocus required value={totp} onChange={(e) => setTotp(e.target.value)} hint="From your authenticator app" />
         )}
-        <Turnstile onToken={setCaptcha} />
+        <Turnstile key={captchaKey} onToken={setCaptcha} />
         <Button type="submit" loading={busy} className="w-full">
           Log in
         </Button>
@@ -108,6 +111,7 @@ export function RegisterPage() {
   const [form, setForm] = useState({ full_name: "", email: "", password: "" });
   const [accepted, setAccepted] = useState(false);
   const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0); // a CAPTCHA answer works once, so a fresh one is shown after every try
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
@@ -122,6 +126,8 @@ export function RegisterPage() {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      setCaptcha(null);
+      setCaptchaKey((k) => k + 1);
       setBusy(false);
     }
   };
@@ -146,7 +152,7 @@ export function RegisterPage() {
             </Link>
           </span>
         </label>
-        <Turnstile onToken={setCaptcha} />
+        <Turnstile key={captchaKey} onToken={setCaptcha} />
         <Button type="submit" loading={busy} disabled={!accepted} className="w-full">
           Create account
         </Button>
@@ -223,6 +229,7 @@ export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0); // a CAPTCHA answer works once, so a fresh one is shown after every try
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -236,6 +243,8 @@ export function ForgotPasswordPage() {
     } catch (err) {
       setError(errorMessage(err));
     } finally {
+      setCaptcha(null);
+      setCaptchaKey((k) => k + 1);
       setBusy(false);
     }
   };
@@ -246,7 +255,7 @@ export function ForgotPasswordPage() {
         <p className="text-sm text-gray-600">Enter your email and we will send you a reset code.</p>
         {error && <Alert>{error}</Alert>}
         <Field id="email" label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Turnstile onToken={setCaptcha} />
+        <Turnstile key={captchaKey} onToken={setCaptcha} />
         <Button type="submit" loading={busy}>
           Send code
         </Button>
