@@ -2,8 +2,8 @@ import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react
 
 export function Card({ title, children, className = "" }: { title?: string; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-xl border border-gray-200 bg-white p-6 shadow-sm ${className}`}>
-      {title && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
+      {title && <h2 className="mb-4 text-base font-semibold tracking-tight">{title}</h2>}
       {children}
     </section>
   );
@@ -31,15 +31,15 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger"; loading?: boolean }) {
   const styles = {
-    primary: "bg-brand-600 text-white hover:bg-brand-700",
-    secondary: "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50",
-    danger: "bg-red-600 text-white hover:bg-red-700",
+    primary: "bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800",
+    secondary: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 active:bg-slate-100",
+    danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800",
   }[variant];
   return (
     <button
       {...rest}
       disabled={disabled || loading}
-      className={`rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
+      className={`rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
     >
       {loading ? "Please wait..." : children}
     </button>
@@ -54,13 +54,13 @@ export function Field({
 }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; id: string }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700">
         {label}
       </label>
       <input
         id={id}
         {...rest}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
       />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
@@ -82,7 +82,7 @@ const BADGE: Record<string, string> = {
 
 export function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE[status] ?? "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${BADGE[status] ?? "bg-gray-100 text-gray-700"}`}>
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -91,8 +91,8 @@ export function StatusBadge({ status }: { status: string }) {
 export function TextArea({ label, id, hint, ...rest }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; id: string; hint?: string }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-      <textarea id={id} rows={4} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-gray-50" />
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <textarea id={id} rows={4} {...rest} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 disabled:bg-gray-50" />
       {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
     </div>
   );
@@ -101,8 +101,8 @@ export function TextArea({ label, id, hint, ...rest }: React.TextareaHTMLAttribu
 export function Select({ label, id, children, ...rest }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; id: string }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-      <select id={id} {...rest} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none disabled:bg-gray-50">{children}</select>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700">{label}</label>
+      <select id={id} {...rest} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25 disabled:bg-slate-50">{children}</select>
     </div>
   );
 }

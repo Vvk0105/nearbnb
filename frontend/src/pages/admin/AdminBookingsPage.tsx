@@ -98,7 +98,7 @@ export function AdminBookingsPage() {
       {error && <Alert>{errorMessage(error)}</Alert>}
       {isLoading && <p className="text-gray-500">Loading...</p>}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="text-xs uppercase text-gray-500">
             <tr><th className="py-2 pr-3">Ref</th><th className="pr-3">Place</th><th className="pr-3">Guest</th><th className="pr-3">Host</th><th className="pr-3">Stay</th><th className="pr-3">Total</th><th className="pr-3">Payment</th><th className="pr-3">Status</th><th>Actions</th></tr>
           </thead>
@@ -117,7 +117,7 @@ export function AdminBookingsPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       {data && data.items.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No bookings.</p>}
       {data && <Pager page={page} pageSize={data.page_size} total={data.total} onChange={setPage} />}

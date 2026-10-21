@@ -154,7 +154,7 @@ export function AuditPage() {
       </div>
       {error && <Alert>{errorMessage(error)}</Alert>}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="border-b text-xs uppercase text-gray-500">
             <tr><th className="py-2 pr-3">When</th><th className="pr-3">Who</th><th className="pr-3">Action</th><th className="pr-3">Target</th><th>Change</th></tr>
           </thead>
@@ -174,7 +174,7 @@ export function AuditPage() {
             ))}
             {data?.items.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-gray-500">No entries.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <div className="mt-4 flex items-center gap-3">
         <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>

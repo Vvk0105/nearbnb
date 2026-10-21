@@ -30,7 +30,7 @@ export function AdminUsersPage() {
       {error && <Alert>{errorMessage(error)}</Alert>}
       {isLoading && <p className="text-gray-500">Loading...</p>}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Role</th><th className="pr-3">Status</th><th className="pr-3">Bookings</th><th>Last login</th></tr></thead>
           <tbody>
             {data?.items.map((u) => (
@@ -44,7 +44,7 @@ export function AdminUsersPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       {data && data.items.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No users match.</p>}
       {data && <Pager page={page} pageSize={data.page_size} total={data.total} onChange={setPage} />}

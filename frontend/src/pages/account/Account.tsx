@@ -347,14 +347,26 @@ function DeactivateCard() {
   );
 }
 
+/** Profile section: who you are and how hosts and guests see you. */
 export default function AccountPage() {
   const { user } = useAuth();
   if (!user) return null;
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Your account</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
       <ProfileCard user={user} />
       <SocialCard user={user} />
+    </div>
+  );
+}
+
+/** Security section: password, email, devices, two-factor, and closing the account. */
+export function SecurityPage() {
+  const { user } = useAuth();
+  if (!user) return null;
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold tracking-tight">Security</h1>
       <PasswordCard />
       <EmailCard user={user} />
       <SessionsCard />

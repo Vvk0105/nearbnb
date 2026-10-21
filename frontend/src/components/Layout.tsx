@@ -8,7 +8,14 @@ import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
 import { Alert, Button, errorMessage } from "./ui";
 
-/** The top-menu word for the host area, by how far the person has got. */
+/** The link in the top bar: only for people who are not hosts yet ("Become a host") and approved hosts ("Host"). Applicants find their application in the profile menu. */
+function headerHostText(state: string | undefined): string | null {
+  if (state === "none") return "Become a host";
+  if (["draft", "changes_requested", "pending_review", "rejected", "suspended"].includes(state ?? "")) return null;
+  return "Host";
+}
+
+/** The word for the host area in the profile menu, by how far the person has got. */
 function hostLinkText(state: string | undefined): string {
   if (state === "none") return "Become a host";
   if (["draft", "changes_requested", "pending_review", "rejected", "suspended"].includes(state ?? "")) return "My application";
@@ -32,9 +39,11 @@ export function PublicFrame({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
           <Logo />
           <nav className="flex items-center gap-1">
-            <NavLink to="/search" className={link}>
-              Explore
-            </NavLink>
+            {!user?.is_admin && headerHostText(user ? host?.state : "none") && (
+              <NavLink to="/host" className={(s) => `hidden sm:inline-block ${link(s)}`}>
+                {headerHostText(user ? host?.state : "none")}
+              </NavLink>
+            )}
             {user ? (
               <UserMenu
                 user={user}

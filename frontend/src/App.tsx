@@ -4,7 +4,8 @@ import Home from "./pages/Home";
 import PropertyPage from "./pages/PropertyPage";
 import SearchPage from "./pages/Search";
 import LegalPage from "./pages/Legal";
-import AccountPage from "./pages/account/Account";
+import AccountPage, { SecurityPage } from "./pages/account/Account";
+import { AccountLayout } from "./components/AccountLayout";
 import { TripDetailPage, TripsPage } from "./pages/account/Trips";
 import { PayPage } from "./pages/account/Pay";
 import { InvoicePage } from "./pages/account/Invoice";
@@ -19,6 +20,7 @@ import { AdminUserDetailPage, AdminUsersPage } from "./pages/admin/AdminUsersPag
 import { MoneyPage } from "./pages/host/MoneyPage";
 import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
+import { ScrollToTop } from "./components/ScrollToTop";
 import { AdminLayout } from "./components/AdminShell";
 import { HostLayout } from "./components/HostShell";
 import { AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
@@ -31,6 +33,8 @@ import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage, VerifyE
 
 export default function App() {
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
@@ -44,7 +48,10 @@ export default function App() {
         <Route path="legal/:docType" element={<LegalPage />} />
 
         <Route element={<RequireAuth />}>
-          <Route path="account" element={<AccountPage />} />
+          <Route path="account" element={<AccountLayout />}>
+            <Route index element={<AccountPage />} />
+            <Route path="security" element={<SecurityPage />} />
+          </Route>
           <Route path="account/trips" element={<TripsPage />} />
           <Route path="account/trips/:bookingId" element={<TripDetailPage />} />
           <Route path="account/trips/:bookingId/pay" element={<PayPage />} />
@@ -97,5 +104,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </>
   );
 }

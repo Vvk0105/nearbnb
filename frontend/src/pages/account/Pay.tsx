@@ -8,6 +8,7 @@ import { money } from "../../lib/format";
 import type { BookingItem, PayStart, PriceBreakdown, Quote } from "../../lib/types";
 import { PriceBreakdownView } from "../../components/availability/AvailabilityPanel";
 import { Countdown } from "../../components/bookings";
+import { Icon } from "../../components/icons";
 import { Alert, Button, Card, errorMessage } from "../../components/ui";
 
 type SyncResult = { outcome: string; booking: BookingItem };
@@ -112,32 +113,41 @@ export function PayPage() {
   const b = booking.data;
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-5">
       <Link to={`/account/trips/${b.id}`} className="text-sm text-brand-700 hover:underline">← Back to my trip</Link>
-      <h1 className="text-2xl font-bold">Pay for your stay</h1>
-      <Card>
-        <p className="font-medium">{b.property.name} · {b.unit.name}</p>
-        <p className="text-sm text-gray-600">{b.check_in_label} → {b.check_out_label} · {b.guests} guest{b.guests > 1 ? "s" : ""}</p>
-        <div className="mt-4"><PriceBreakdownView quote={{ price: b.price as PriceBreakdown, currency: b.currency } as Quote} /></div>
-      </Card>
-      {start && <Countdown target={b.payment_deadline_at} seconds={start.seconds_to_pay} label="Time left to pay:" onDone={() => navigate(`/account/trips/${b.id}`)} />}
-      {startError && (
-        <Alert>
-          {startError.message} <Link to={`/account/trips/${b.id}`} className="underline">Back to my trip</Link>
-        </Alert>
-      )}
-      {!start && !startError && <p className="text-sm text-gray-500">Preparing payment...</p>}
-      {start && start.fake && <DevPay bookingId={b.id} amount={start.amount} currency={start.currency} />}
-      {start && !start.fake && !start.publishable_key && (
-        <Alert>Card payments are not switched on yet: the Stripe publishable key is missing on the server (STRIPE_PUBLISHABLE_KEY). Please contact support.</Alert>
-      )}
-      {start && !start.fake && stripePromise && start.client_secret && (
-        <Card>
-          <Elements stripe={stripePromise} options={{ clientSecret: start.client_secret, appearance: { theme: "stripe", variables: { colorPrimary: "#0d9488" } } }}>
-            <CardForm bookingId={b.id} amount={start.amount} currency={start.currency} />
-          </Elements>
-        </Card>
-      )}
+      <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Pay for your stay</h1>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="space-y-4 lg:col-span-3">
+          {start && <Countdown target={b.payment_deadline_at} seconds={start.seconds_to_pay} label="Time left to pay:" onDone={() => navigate(`/account/trips/${b.id}`)} />}
+          {startError && (
+            <Alert>
+              {startError.message} <Link to={`/account/trips/${b.id}`} className="underline">Back to my trip</Link>
+            </Alert>
+          )}
+          {!start && !startError && <p className="text-sm text-gray-500">Preparing payment...</p>}
+          {start && start.fake && <DevPay bookingId={b.id} amount={start.amount} currency={start.currency} />}
+          {start && !start.fake && !start.publishable_key && (
+            <Alert>Card payments are not switched on yet: the Stripe publishable key is missing on the server (STRIPE_PUBLISHABLE_KEY). Please contact support.</Alert>
+          )}
+          {start && !start.fake && stripePromise && start.client_secret && (
+            <Card>
+              <Elements stripe={stripePromise} options={{ clientSecret: start.client_secret, appearance: { theme: "stripe", variables: { colorPrimary: "#0d9488" } } }}>
+                <CardForm bookingId={b.id} amount={start.amount} currency={start.currency} />
+              </Elements>
+            </Card>
+          )}
+          <p className="flex items-center gap-2 text-xs text-slate-500"><Icon name="shield" className="h-4 w-4 text-brand-600" /> Payments are processed securely by Stripe. NearBnB never sees your card number.</p>
+        </div>
+        <aside className="lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
+          <Card>
+            <p className="font-semibold">{b.property.name}</p>
+            <p className="text-sm text-slate-600">{b.unit.name}</p>
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-800"><Icon name="calendar" className="h-4 w-4 text-slate-400" />{b.check_in_label} → {b.check_out_label}</p>
+            <p className="text-sm text-slate-500">{b.guests} guest{b.guests > 1 ? "s" : ""}</p>
+            <div className="mt-4 border-t border-slate-100 pt-4"><PriceBreakdownView quote={{ price: b.price as PriceBreakdown, currency: b.currency } as Quote} /></div>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }

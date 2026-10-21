@@ -5,6 +5,7 @@ import { money } from "../../lib/format";
 import type { HostMoney } from "../../lib/types";
 import { Pager } from "../../components/Pager";
 import { Alert, Card, Field, errorMessage } from "../../components/ui";
+import { Kpi } from "../../components/dashboardUi";
 
 const STATE: Record<string, string> = { scheduled: "Scheduled", held: "On hold", paid: "Paid", failed: "Retrying", reversed: "Taken back", none: "-" };
 
@@ -23,14 +24,12 @@ export function MoneyPage() {
   const csv = apiUrl(`/host/money/export.csv${month ? `?month=${month}` : ""}`);
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-2xl font-bold">Earnings and payouts</h1>
-      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Paid out so far", money(s.paid_out, cur)],
-          ["On its way", money(s.scheduled, cur)],
-          ["This month's stays", money(s.this_month, cur)],
-          ["Next payout", s.next_payout ? `${money(s.next_payout.amount, cur)} · ${s.next_payout.at.slice(0, 10)}` : "None scheduled"],
-        ].map(([label, value]) => <div key={label} className="rounded-xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-500">{label}</p><p className="text-lg font-semibold">{value}</p></div>)}
+      <h1 className="text-2xl font-bold tracking-tight">Earnings and payouts</h1>
+      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Kpi icon="wallet" label="Paid out so far" value={money(s.paid_out, cur)} />
+        <Kpi icon="calendar" label="On its way" value={money(s.scheduled, cur)} />
+        <Kpi icon="money" label="This month's stays" value={money(s.this_month, cur)} />
+        <Kpi icon="card" label="Next payout" value={s.next_payout ? `${money(s.next_payout.amount, cur)} · ${s.next_payout.at.slice(0, 10)}` : "None scheduled"} />
       </section>
       {s.deductions > 0 && <Alert kind="info">{money(s.deductions, cur)} has been taken from your earnings for refunds you asked for.</Alert>}
 
@@ -40,7 +39,7 @@ export function MoneyPage() {
           <a href={csv} download className="mb-0.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50">Download CSV</a>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto"><table className="data-table">
             <thead className="text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Check-in</th><th className="pr-3">Booking</th><th className="pr-3 text-right">Booking value</th><th className="pr-3 text-right">Commission</th><th className="pr-3 text-right">Your share</th><th className="pr-3 text-right">Refunds</th><th className="pr-3 text-right">You receive</th><th>Payout</th></tr></thead>
             <tbody>
               {data.items.map((r) => (
@@ -56,7 +55,7 @@ export function MoneyPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         {data.items.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No earnings{month ? " in this month" : " yet"}.</p>}
         <Pager page={page} pageSize={data.page_size} total={data.total} onChange={setPage} />

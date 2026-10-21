@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
+import { api, mediaUrl } from "../../lib/api";
 import { fieldLabel, fromCents, money, toCents } from "../../lib/format";
 import type { CalendarData, CancellationTemplate, ListingMeta, PropertyData, UnitData } from "../../lib/types";
 import { CalendarSyncCard } from "../../components/CalendarSync";
@@ -9,6 +9,8 @@ import { describeTiers } from "../../components/CancelBooking";
 import { PhotoManager } from "../../components/PhotoManager";
 import { PlaceInput } from "../../components/PlaceInput";
 import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
+import { EmptyState } from "../../components/dashboardUi";
+import { Icon } from "../../components/icons";
 import { useHost } from "./HostPages";
 
 const TIMEZONES = ["Australia/Sydney", "Australia/Melbourne", "Australia/Brisbane", "Australia/Adelaide", "Australia/Perth", "Australia/Hobart", "Australia/Darwin", "UTC"];
@@ -85,7 +87,7 @@ export function PropertiesPage() {
   if (error) return <Alert>{errorMessage(error)}</Alert>;
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-2xl font-bold">Your properties</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Your properties</h1>
       {host && !host.can_create_listings && <Alert kind="info">You can add properties once your host application is approved.</Alert>}
       {host?.can_create_listings && !host.can_submit_listings && <Alert kind="info">You can draft properties now. Submitting for approval unlocks when payout setup is complete.</Alert>}
       {host?.can_create_listings && (
@@ -98,22 +100,26 @@ export function PropertiesPage() {
         </Card>
       )}
       {isLoading && <p className="text-gray-500">Loading...</p>}
-      <div className="space-y-3">
-        {data?.map((p) => (
-          <Link key={p.id} to={`/host/properties/${p.id}`} className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold">{p.name}</p>
-                <p className="text-xs text-gray-500">{[p.suburb, p.state].filter(Boolean).join(", ") || "No address yet"} · {p.units.length} unit(s)</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {data?.map((p) => {
+          const cover = p.photos?.[0]?.thumb_url;
+          const from = p.units.length ? Math.min(...p.units.map((u) => u.price_per_24h)) : null;
+          return (
+            <Link key={p.id} to={`/host/properties/${p.id}`} className="group flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-300 hover:shadow-md">
+              {cover ? <img src={mediaUrl(cover)} alt="" className="h-auto w-28 shrink-0 object-cover sm:w-36" /> : <div className="flex w-28 shrink-0 items-center justify-center bg-slate-100 text-slate-300 sm:w-36"><Icon name="home" className="h-8 w-8" /></div>}
+              <div className="min-w-0 flex-1 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-semibold">{p.name}</p>
+                  {p.pending_revisions && p.pending_revisions.length > 0 && <StatusBadge status="pending" />}
+                  <StatusBadge status={p.status} />
+                </div>
+                <p className="mt-1 truncate text-sm text-slate-500">{[p.suburb, p.state].filter(Boolean).join(", ") || "No address yet"}</p>
+                <p className="mt-2 text-xs text-slate-500">{p.units.length} unit(s){from !== null ? ` · from ${money(from, p.units[0].currency)} / 24h` : ""}</p>
               </div>
-              <div className="flex items-center gap-2">
-                {p.pending_revisions && p.pending_revisions.length > 0 && <StatusBadge status="pending" />}
-                <StatusBadge status={p.status} />
-              </div>
-            </div>
-          </Link>
-        ))}
-        {data?.length === 0 && <p className="text-sm text-gray-500">No properties yet.</p>}
+            </Link>
+          );
+        })}
+        {data?.length === 0 && <div className="sm:col-span-2"><EmptyState icon="home" title="No properties yet">Add your first one above to get started.</EmptyState></div>}
       </div>
     </div>
   );
@@ -345,7 +351,7 @@ function BlockCalendar({ unit, timezone, disabled }: { unit: UnitData; timezone:
         </form>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="border-b text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">From</th><th className="pr-3">Until</th>{unit.rooms.length > 1 && <th className="pr-3">Room</th>}<th className="pr-3">Type</th><th /></tr></thead>
           <tbody>
             {data?.entries.map((en) => (
@@ -359,7 +365,7 @@ function BlockCalendar({ unit, timezone, disabled }: { unit: UnitData; timezone:
             ))}
             {data?.entries.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-gray-500">Nothing blocked or booked in the next 6 months.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

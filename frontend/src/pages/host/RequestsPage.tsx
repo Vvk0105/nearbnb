@@ -6,6 +6,7 @@ import type { BookingGroup, BookingItem, BookingList } from "../../lib/types";
 import { BookingBadge, Countdown } from "../../components/bookings";
 import { HostBookingActions } from "../../components/HostBookingActions";
 import { ReportProblem, ReviewBox, Stars } from "../../components/Reviews";
+import { EmptyState } from "../../components/dashboardUi";
 import { Alert, Button, Card, TextArea, errorMessage } from "../../components/ui";
 
 const TABS: [BookingGroup, string][] = [["pending", "Needs reply"], ["awaiting_payment", "Awaiting payment"], ["upcoming", "Upcoming"], ["past", "Past"]];
@@ -109,11 +110,11 @@ export function RequestsPage() {
   };
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <h1 className="text-2xl font-bold">Booking requests</h1>
-      <div className="flex flex-wrap gap-2" role="tablist">
+      <h1 className="text-2xl font-bold tracking-tight">Booking requests</h1>
+      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist">
         {TABS.map(([key, text]) => (
           <button key={key} role="tab" aria-selected={group === key} onClick={() => setGroup(key)}
-            className={`rounded-full border px-3 py-1 text-sm ${group === key ? "border-brand-600 bg-brand-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"}`}>
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition ${group === key ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}>
             {text}{data?.counts[key] ? ` (${data.counts[key]})` : ""}
           </button>
         ))}
@@ -121,7 +122,7 @@ export function RequestsPage() {
       {group === "pending" && <Alert kind="info">Reply quickly: a request expires if you do not answer in time, and the dates are released.</Alert>}
       {error && <Alert>{errorMessage(error)}</Alert>}
       {isLoading && <p className="text-gray-500">Loading...</p>}
-      {data && data.items.length === 0 && <Card><p className="text-sm text-gray-600">Nothing here right now.</p></Card>}
+      {data && data.items.length === 0 && <EmptyState icon="booking" title="Nothing here right now" />}
       {data?.items.map((b) => <RequestCard key={`${b.id}-${b.status}`} b={b} onDone={refresh} />)}
     </div>
   );

@@ -48,7 +48,7 @@ export function ListingsPage() {
           <Field id="pq" label="Search property, host or suburb" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {props.error && <Alert>{errorMessage(props.error)}</Alert>}
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="border-b text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Property</th><th className="pr-3">Host</th><th className="pr-3">Units</th><th className="pr-3">Status</th><th>Submitted</th></tr></thead>
           <tbody>
             {props.data?.items.map((p) => (
@@ -62,7 +62,7 @@ export function ListingsPage() {
             ))}
             {props.data?.items.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-gray-500">No listings here.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
       </Card>
     </div>
   );

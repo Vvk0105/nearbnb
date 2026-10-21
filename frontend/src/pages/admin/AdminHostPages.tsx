@@ -36,7 +36,7 @@ export function HostsListPage() {
       </div>
       {error && <Alert>{errorMessage(error)}</Alert>}
       {isLoading && <p className="text-gray-500">Loading...</p>}
-      <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto"><table className="data-table">
         <thead className="border-b text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Host</th><th className="pr-3">Email</th><th className="pr-3">Status</th><th>Submitted</th></tr></thead>
         <tbody>
           {data?.items.map((h) => (
@@ -49,7 +49,7 @@ export function HostsListPage() {
           ))}
           {data?.items.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-gray-500">Nobody here.</td></tr>}
         </tbody>
-      </table>
+      </table></div>
     </Card>
   );
 }
@@ -175,7 +175,7 @@ export function HostDetailPage() {
 
       <Card title="Settings for this host">
         <p className="mb-3 text-sm text-gray-600">Override a platform setting for this host only. Anything not overridden follows the global value.</p>
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto"><table className="data-table">
           <thead className="border-b text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Setting</th><th className="pr-3">Global</th><th className="pr-3">This host</th><th /></tr></thead>
           <tbody>
             {data.overrides.map((o) => {
@@ -202,7 +202,7 @@ export function HostDetailPage() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </Card>
     </div>
   );

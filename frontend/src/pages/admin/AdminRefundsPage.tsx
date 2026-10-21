@@ -78,7 +78,7 @@ export function AdminRefundsPage() {
         </div>
         {retryError && <Alert>{retryError}</Alert>}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto"><table className="data-table">
             <thead className="text-xs uppercase text-gray-500"><tr><th className="py-2 pr-3">Booking</th><th className="pr-3">Type</th><th className="pr-3">Amount</th><th className="pr-3">Status</th><th>Detail</th></tr></thead>
             <tbody>
               {refunds.data?.map((r) => (
@@ -94,7 +94,7 @@ export function AdminRefundsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         {refunds.data?.length === 0 && <p className="py-4 text-center text-sm text-gray-500">No refunds here.</p>}
       </Card>

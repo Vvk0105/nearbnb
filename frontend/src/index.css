@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Thin dark scrollbar for the dark sidebars, so a long menu does not show the browser's bright default bar. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar { width: 6px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 9999px; }
+.sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* Shared look for every data table (admin lists, host earnings). Descendant selectors beat the older per-cell classes. */
+.data-table { width: 100%; text-align: left; font-size: 0.875rem; border-collapse: collapse; }
+.data-table thead { border-bottom: 1px solid #e2e8f0; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; }
+.data-table th { padding: 0.625rem 1rem 0.625rem 0; font-weight: 600; white-space: nowrap; }
+.data-table td { padding: 0.75rem 1rem 0.75rem 0; vertical-align: middle; }
+.data-table tbody tr { border-top: 1px solid #f1f5f9; transition: background-color 120ms; }
+.data-table tbody tr:first-child { border-top: 0; }
+.data-table tbody tr:hover { background-color: #f8fafc; }
+.data-table a { color: #0f766e; text-decoration: none; font-weight: 500; }
+.data-table a:hover { text-decoration: underline; }
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; }
+}

@@ -17,7 +17,7 @@ export function titleFor(groups: Group[], pathname: string, fallback: string): s
 
 function Nav({ groups, label, counts, onNavigate }: { groups: Group[]; label: string; counts: Record<string, number>; onNavigate?: () => void }) {
   return (
-    <nav aria-label={label} className="space-y-5 px-3 pb-6">
+    <nav aria-label={label} className="space-y-4 px-3 pb-4">
       {groups.map((g) => (
         <div key={g.title}>
           <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{g.title}</p>
@@ -31,7 +31,7 @@ function Nav({ groups, label, counts, onNavigate }: { groups: Group[]; label: st
                     end={item.end}
                     onClick={onNavigate}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${isActive ? "bg-brand-500/15 font-medium text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"}`
+                      `group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition ${isActive ? "bg-brand-500/15 font-medium text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"}`
                     }
                   >
                     {({ isActive }) => (
@@ -75,12 +75,12 @@ export function AppShell({ area, groups, counts, homeTo, title, titleIsHeading =
 
   const sidebar = (
     <div className="flex h-full flex-col bg-slate-900">
-      <div className="flex h-16 shrink-0 items-center px-5">
+      <div className="flex h-14 shrink-0 items-center px-5">
         <Link to={homeTo} aria-label={`${area} home`} className="text-xl font-extrabold tracking-tight text-white">
           Near<span className="text-brand-400">BnB</span> <span className="ml-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-300">{area}</span>
         </Link>
       </div>
-      <div className="flex-1 overflow-y-auto pt-2">
+      <div className="sidebar-scroll flex-1 overflow-y-auto pt-1">
         <Nav groups={groups} label={area} counts={counts} onNavigate={() => setOpen(false)} />
       </div>
       <div className="space-y-0.5 border-t border-white/10 p-3">
