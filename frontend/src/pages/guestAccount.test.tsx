@@ -38,14 +38,14 @@ describe("account settings and trips", () => {
     const nav = await screen.findByRole("navigation", { name: "Account settings" });
     expect(within(nav).getAllByRole("link").map((l) => l.textContent?.trim())).toEqual(["Profile", "Security"]);
     expect(await screen.findByRole("heading", { level: 1, name: "Profile" })).toBeTruthy();
-    expect(screen.queryByText("Change password")).toBeNull();                  // that lives under Security now
+    expect(screen.queryByRole("heading", { name: "Change password" })).toBeNull();   // that lives under Security now
   });
 
   it("keeps password, email, devices and closing the account together under Security", async () => {
     open("/account/security");
     expect(await screen.findByRole("heading", { level: 1, name: "Security" })).toBeTruthy();
     for (const title of ["Change password", "Change email", "Active sessions", "Deactivate account"]) {
-      expect(screen.getByText(title)).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 2, name: title })).toBeTruthy();
     }
   });
 

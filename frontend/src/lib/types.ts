@@ -20,6 +20,7 @@ export type User = {
 };
 
 export type SettingItem = {
+  choice_labels?: Record<string, string>;
   key: string;
   group: string;
   label: string;

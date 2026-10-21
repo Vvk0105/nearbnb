@@ -11,6 +11,7 @@ from app.core.deps import require_admin
 from app.core.errors import AppError
 from app.core.ratelimit import client_ip
 from app.modules.audit.models import AuditLog
+from app.modules.cancellations.models import CancellationTemplate
 from app.modules.legal import service as legal
 from app.modules.legal.models import DOC_TYPES
 from app.modules.settings import service as settings_service
@@ -31,16 +32,34 @@ class LegalPublish(BaseModel):
     body: str = Field(min_length=1)
 
 
+# These two settings name a cancellation template, so the admin picks from the templates that exist (and are switched on)
+# instead of typing a key. Add a template and it shows up in both lists by itself.
+TEMPLATE_SETTINGS = ("cancellation.default_template", "cancellation.guardrail_template")
+
+
+async def _active_templates(session: AsyncSession) -> list[CancellationTemplate]:
+    q = select(CancellationTemplate).where(CancellationTemplate.active.is_(True)).order_by(CancellationTemplate.strictness, CancellationTemplate.name)
+    return list((await session.execute(q)).scalars().all())
+
+
 @router.get("/settings")
 async def list_settings(session: AsyncSession = Depends(get_session)):
     items = []
+    templates = await _active_templates(session)
     for definition in REGISTRY.values():
         current = await settings_service.get_effective(session, definition.key)
+        kind, choices, labels = definition.type, list(definition.choices), {}
+        if definition.key in TEMPLATE_SETTINGS:
+            kind, choices = "choice", [t.key for t in templates]
+            labels = {t.key: f"{t.name} (strictness {t.strictness})" for t in templates}
+            if current.value not in choices:  # a value that was switched off since: keep it visible rather than breaking the list
+                choices.append(current.value)
+                labels[current.value] = f"{current.value} (switched off)"
         items.append(
             {
                 "key": definition.key, "group": definition.group, "label": definition.label,
-                "description": definition.description, "type": definition.type, "unit": definition.unit,
-                "min": definition.min, "max": definition.max, "choices": list(definition.choices), "host_override": definition.host_override,
+                "description": definition.description, "type": kind, "unit": definition.unit,
+                "min": definition.min, "max": definition.max, "choices": choices, "choice_labels": labels, "host_override": definition.host_override,
                 "default": definition.default, "value": current.value, "source": current.source,
                 "version": current.version,
             }
@@ -51,6 +70,8 @@ async def list_settings(session: AsyncSession = Depends(get_session)):
 @router.put("/settings/{key}")
 async def update_setting(key: str, body: SettingUpdate, request: Request, admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
     get_def(key)
+    if key in TEMPLATE_SETTINGS and body.value not in [t.key for t in await _active_templates(session)]:
+        raise AppError(422, "INVALID_SETTING", "Choose one of the active cancellation policies from the list.")
     result = await settings_service.set_global(
         session, key, body.value, actor_id=admin.id, reason=body.reason, ip=client_ip(request)
     )

@@ -72,7 +72,7 @@ function SettingRow({ item }: { item: SettingItem }) {
           ) : item.type === "choice" ? (
             <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value={text} onChange={(e) => setText(e.target.value)}>
               {item.choices.map((c) => (
-                <option key={String(c)} value={String(c)}>{String(c)}</option>
+                <option key={String(c)} value={String(c)}>{item.choice_labels?.[String(c)] ?? String(c)}</option>
               ))}
             </select>
           ) : (

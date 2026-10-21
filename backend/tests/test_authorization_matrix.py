@@ -125,3 +125,13 @@ async def test_security_headers_on_every_answer(client):
         assert r.headers["referrer-policy"] == "no-referrer", url
         assert "frame-ancestors 'none'" in r.headers["content-security-policy"], url
     assert (await client.get("/api/v1/bookings")).headers["cache-control"] == "no-store"
+
+
+@pytest.mark.asyncio
+async def test_the_swagger_page_may_load_its_files_but_api_answers_stay_locked_down(client):
+    docs = await client.get("/docs")                               # switched off in production, available in development and tests
+    assert docs.status_code == 200
+    csp = docs.headers["content-security-policy"]
+    assert "https://cdn.jsdelivr.net" in csp and "frame-ancestors 'none'" in csp
+    api = await client.get("/api/v1/health")
+    assert api.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"

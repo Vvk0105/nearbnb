@@ -50,6 +50,13 @@ app.add_exception_handler(AppError, app_error_handler)
 app.middleware("http")(csrf_middleware)
 
 
+DOCS_PATHS = {"/docs", "/docs/oauth2-redirect", "/redoc", "/openapi.json"}
+DOCS_CSP = (
+    "default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; frame-ancestors 'none'"
+)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     """Safe defaults on every answer. The API serves JSON, files and calendars, never pages, so framing and sniffing are off."""
@@ -57,7 +64,11 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+    if request.url.path in DOCS_PATHS:
+        # The Swagger page (development only: it is switched off in production) loads its files from a CDN and runs a small inline script.
+        response.headers["Content-Security-Policy"] = DOCS_CSP
+    else:
+        response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
     response.headers.setdefault("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
     # Private answers must never sit in a shared cache. Public images, feeds and docs set their own caching.
     if request.url.path.startswith("/api/v1") and "cache-control" not in response.headers:

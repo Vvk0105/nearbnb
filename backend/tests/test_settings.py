@@ -75,3 +75,30 @@ async def test_admin_updates_setting_and_audit_entry_is_written(client, make_adm
 
     history = (await client.get(f"{API}/admin/settings/checkin.interval_minutes/history")).json()
     assert history[0]["value"] == 30
+
+
+async def test_the_cancellation_settings_are_pick_lists_of_the_templates_that_exist(new_client, make_admin):
+    from tests.helpers import admin_client
+
+    admin = await admin_client(new_client, make_admin)
+    h = csrf_headers(admin)
+    rows = {r["key"]: r for r in (await admin.get(f"{API}/admin/settings")).json()}
+    for key in ("cancellation.default_template", "cancellation.guardrail_template"):
+        assert rows[key]["type"] == "choice"
+        assert rows[key]["choices"] == ["flexible", "moderate", "strict"]               # strictest last
+        assert rows[key]["choice_labels"]["moderate"].startswith("Moderate")
+
+    # a new template appears in both lists straight away
+    made = await admin.post(f"{API}/admin/cancellation-templates", json={
+        "key": "super_flexible", "name": "Super flexible", "description": "", "strictness": 1, "tiers": [{"hours_before": 24, "refund_pct": 100}]}, headers=h)
+    assert made.status_code in (200, 201), made.text
+    rows = {r["key"]: r for r in (await admin.get(f"{API}/admin/settings")).json()}
+    assert "super_flexible" in rows["cancellation.default_template"]["choices"] and "super_flexible" in rows["cancellation.guardrail_template"]["choices"]
+
+    # and only existing, active templates can be saved
+    ok = await admin.put(f"{API}/admin/settings/cancellation.default_template", json={"value": "flexible", "reason": "test"}, headers=h)
+    assert ok.status_code == 200
+    bad = await admin.put(f"{API}/admin/settings/cancellation.default_template", json={"value": "no_such_policy", "reason": "test"}, headers=h)
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "INVALID_SETTING"
+    bad = await admin.put(f"{API}/admin/settings/cancellation.guardrail_template", json={"value": "", "reason": "test"}, headers=h)
+    assert bad.status_code == 422
