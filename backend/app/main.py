@@ -74,13 +74,14 @@ app.add_middleware(
 api = APIRouter(prefix="/api/v1")
 
 
-@api.get("/health")
+# HEAD is allowed too: uptime monitors (UptimeRobot and others) check with HEAD, and would otherwise get 405.
+@api.api_route("/health", methods=["GET", "HEAD"])
 async def health(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
     await session.execute(text("SELECT 1"))
     return {"status": "ok"}
 
 
-@api.get("/health/ready")
+@api.api_route("/health/ready", methods=["GET", "HEAD"])
 async def ready(session: AsyncSession = Depends(get_session)):
     """Deeper check for monitors: database, Redis and whether the database is on the latest migration."""
     from fastapi.responses import JSONResponse
