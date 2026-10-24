@@ -4,6 +4,7 @@ import { useAuth } from "../lib/auth";
 import { ConsentGate } from "./Layout";
 import { Icon, type IconName } from "./icons";
 import { Logo } from "./Logo";
+import { NotificationBell } from "./NotificationBell";
 
 export type Item = { to: string; label: string; icon: IconName; end?: boolean; badge?: string[] };
 export type Group = { title: string; items: Item[] };
@@ -113,6 +114,7 @@ export function AppShell({ area, groups, counts, homeTo, title, titleIsHeading =
           <div className="lg:hidden"><Logo className="!text-lg" /></div>
           {titleIsHeading ? <h1 className={titleClass}>{title}</h1> : <p className={titleClass}>{title}</p>}
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell />
             <Link to="/account" className="hidden text-sm text-slate-500 hover:text-slate-800 sm:inline">{user?.full_name}</Link>
             <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">{(user?.full_name ?? "A").slice(0, 1).toUpperCase()}</span>
             <button

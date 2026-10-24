@@ -23,6 +23,7 @@ import { AdminRefundsPage } from "./pages/admin/AdminRefundsPage";
 import { RequestsPage } from "./pages/host/RequestsPage";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { AdminLayout } from "./components/AdminShell";
+import { NotificationsPage } from "./pages/Notifications";
 import { HostLayout } from "./components/HostShell";
 import { AuditPage, LegalAdminPage, SettingsPage } from "./pages/admin/AdminPages";
 import { HostDetailPage, HostsListPage } from "./pages/admin/AdminHostPages";
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="security" element={<SecurityPage />} />
           </Route>
           <Route path="account/trips" element={<TripsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="account/trips/:bookingId" element={<TripDetailPage />} />
           <Route path="account/trips/:bookingId/pay" element={<PayPage />} />
           <Route path="account/trips/:bookingId/invoice" element={<InvoicePage />} />

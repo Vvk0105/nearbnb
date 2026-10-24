@@ -672,7 +672,8 @@ async def test_the_feed_needs_the_exact_secret_link_and_supports_conditional_req
     anon = await new_client()
     ok = await anon.get(f"{API}{path}")
     assert ok.status_code == 200
-    for bad in (path[:-5] + "X.ics", path.replace(".ics", ""), "/ical/short.ics", "/ical/" + "a" * 24 + ".ics", path + "x"):
+    wrong_last = "Y" if path[-5] == "X" else "X"                 # a random secret can already end in X, so pick a character that differs
+    for bad in (path[:-5] + wrong_last + ".ics", path.replace(".ics", ""), "/ical/short.ics", "/ical/" + "a" * 24 + ".ics", path + "x"):
         assert (await anon.get(f"{API}{bad}")).status_code == 404, bad
     cached = await anon.get(f"{API}{path}", headers={"If-None-Match": ok.headers["etag"]})
     assert cached.status_code == 304 and not cached.content

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.modules.notifications import inbox
 from app.modules.notifications.models import EMAIL_FAILED, EMAIL_PENDING, EMAIL_SENT, EmailOutbox
 from app.modules.notifications.templates import render
 
@@ -31,6 +32,10 @@ def enqueue_email(
         user_id=user_id, to_email=to_email, template=template, subject=subject, body_text=text, body_html=html
     )
     session.add(row)
+    if user_id is not None:  # the same moment also leaves a line in the person's bell (codes and security emails do not)
+        notification = inbox.build(user_id, template, subject, context)
+        if notification is not None:
+            session.add(notification)
     return row
 
 

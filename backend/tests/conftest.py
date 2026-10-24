@@ -64,6 +64,16 @@ async def _setup_database():
         ))
 
 
+@pytest.fixture(autouse=True)
+def _fresh_redis_client():
+    """Each test runs on its own event loop, and a Redis connection cannot be reused on a different loop."""
+    import app.core.redis as redis_module
+
+    redis_module._client = None
+    yield
+    redis_module._client = None
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_tables():
     async with engine.begin() as c:

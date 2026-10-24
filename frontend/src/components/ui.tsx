@@ -84,6 +84,16 @@ export function Field({
   );
 }
 
+/**
+ * What the NearBNB team wrote when they reviewed something. Only a request for changes or a rejection needs the person to act,
+ * so only those get a banner. After an approval the note is history and shows as one quiet line.
+ */
+export function TeamNote({ status, note }: { status: string; note: string | null | undefined }) {
+  if (!note) return null;
+  if (status === "changes_requested" || status === "rejected") return <Alert kind="info">Message from the NearBNB team: {note}</Alert>;
+  return <p className="text-xs text-slate-500">Last note from the NearBNB team: “{note}”</p>;
+}
+
 export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Something went wrong. Please try again.";
 }

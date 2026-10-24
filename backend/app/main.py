@@ -22,6 +22,7 @@ from app.modules.issues.router import router as issues_router
 from app.modules.hosts.admin_router import router as admin_hosts_router
 from app.modules.hosts.router import router as host_router
 from app.modules.legal.router import router as legal_router
+from app.modules.notifications.router import router as notifications_router
 from app.modules.media.router import router as media_router
 from app.modules.payments.router import router as webhooks_router
 from app.modules.places.router import router as places_router
@@ -116,6 +117,7 @@ async def ready(session: AsyncSession = Depends(get_session)):
 
 api.include_router(auth_router)
 api.include_router(me_router)
+api.include_router(notifications_router)
 api.include_router(legal_router)
 api.include_router(media_router)
 api.include_router(admin_router)

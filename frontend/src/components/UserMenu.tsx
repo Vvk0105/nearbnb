@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { User } from "../lib/types";
 import { Icon, type IconName } from "./icons";
+import { useDismiss } from "./useDismiss";
 
 type Entry = { to: string; label: string; icon: IconName };
 
@@ -12,19 +13,7 @@ export function UserMenu({ user, hostLabel, onLogout }: { user: User; hostLabel:
   const location = useLocation();
   useEffect(() => setOpen(false), [location.pathname]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismiss(open, () => setOpen(false), box);
 
   const entries: Entry[] = user.is_admin
     ? [{ to: "/admin", label: "Admin dashboard", icon: "dashboard" }, { to: "/account", label: "Account settings", icon: "settings" }]

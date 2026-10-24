@@ -215,6 +215,8 @@ export type HostDashboardData = {
   state: string; requests: { pending: number; awaiting_payment: number }; current_stays: BookingItem[]; upcoming_stays: BookingItem[];
   listings: Record<string, number>; money: MoneySummary; needs_attention: string[];
 };
+export type Notice = { id: string; kind: string; title: string; body: string; link: string; tone: "news" | "action" | "problem"; created_at: string; read: boolean };
+export type NoticeList = { total: number; page: number; page_size: number; unread: number; items: Notice[] };
 export type AdminAlert = { key: string; label: string; count: number; href: string; severity: "none" | "info" | "action" | "problem" };
 export type AdminDashboardData = {
   alerts: AdminAlert[];

@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type { HostInfo, User } from "../lib/types";
 import { Logo } from "./Logo";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 import { Alert, Button, errorMessage } from "./ui";
 
@@ -33,6 +34,8 @@ export function PublicFrame({ children }: { children: ReactNode }) {
           <Logo />
           <nav className="flex items-center gap-1">
             {user ? (
+              <>
+              <NotificationBell />
               <UserMenu
                 user={user}
                 hostLabel={hostLinkText(host?.state)}
@@ -46,6 +49,7 @@ export function PublicFrame({ children }: { children: ReactNode }) {
                   }
                 }}
               />
+              </>
             ) : (
               <>
                 <NavLink to="/login" className={link}>

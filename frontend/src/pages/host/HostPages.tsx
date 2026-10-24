@@ -6,7 +6,7 @@ import { label } from "../../lib/format";
 import type { BookingList, HostInfo } from "../../lib/types";
 import { HostDashboard } from "../../components/HostDashboard";
 import { BecomeHost } from "./BecomeHost";
-import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
+import { Alert, Button, Card, Field, Select, StatusBadge, TeamNote, TextArea, errorMessage } from "../../components/ui";
 
 export function useHost() {
   const queryClient = useQueryClient();
@@ -167,7 +167,7 @@ export function ApplyPage() {
         <StatusBadge status={host.state} />
       </div>
       <Steps host={host} />
-      {host.review_note && <Alert kind="info">Message from the NearBNB team: {host.review_note}</Alert>}
+      <TeamNote status={host.state} note={host.review_note} />
       {host.suspended_reason && <Alert>Suspended: {host.suspended_reason}</Alert>}
       {!editable && <Alert kind="info">{host.state === "pending_review" ? "Your application is being reviewed and can't be edited right now." : "This application can't be edited."}</Alert>}
       {error && <Alert>{error}</Alert>}

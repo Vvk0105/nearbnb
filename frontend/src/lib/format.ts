@@ -31,6 +31,17 @@ export function timeLabel(hhmm: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/** "just now", "5 min ago", "3 h ago", "2 days ago", then the date. */
+export function timeAgo(isoTime: string, now: number = Date.now()): string {
+  const minutes = Math.floor((now - new Date(isoTime).getTime()) / 60000);
+  if (Number.isNaN(minutes) || minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)} h ago`;
+  if (minutes < 43200) { const d = Math.floor(minutes / 1440); return `${d} day${d > 1 ? "s" : ""} ago`; }
+  const d = new Date(isoTime);
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 export const todayIso = (): string => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

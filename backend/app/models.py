@@ -15,6 +15,6 @@ from app.modules.pricing.models import TaxRule  # noqa: F401
 from app.modules.properties.models import (  # noqa: F401
     Amenity, ListingRevision, Media, Property, PropertyType, Room, RoomOccupancy, Unit, unit_amenities,
 )
-from app.modules.notifications.models import EmailOutbox  # noqa: F401
+from app.modules.notifications.models import EmailOutbox, Notification  # noqa: F401
 from app.modules.settings.models import Setting  # noqa: F401
 from app.modules.users.models import User, UserConsent, UserSocialLink  # noqa: F401

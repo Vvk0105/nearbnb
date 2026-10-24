@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, mediaUrl } from "../../lib/api";
@@ -8,7 +8,7 @@ import { CalendarSyncCard } from "../../components/CalendarSync";
 import { describeTiers } from "../../components/CancelBooking";
 import { PhotoManager } from "../../components/PhotoManager";
 import { PlaceInput } from "../../components/PlaceInput";
-import { Alert, Button, Card, Field, Select, StatusBadge, TextArea, errorMessage } from "../../components/ui";
+import { Alert, Button, Card, Field, Select, StatusBadge, TeamNote, TextArea, errorMessage } from "../../components/ui";
 import { EmptyState } from "../../components/dashboardUi";
 import { Icon } from "../../components/icons";
 import { useHost } from "./HostPages";
@@ -60,12 +60,17 @@ function useAction() {
       setBusy(false);
     }
   };
-  const banner = (
-    <>
+  // The answer to a button press is shown next to the button, and scrolled into view if the button was far down the page.
+  const anchor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error || info) anchor.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [error, info]);
+  const banner = (error || info) ? (
+    <div ref={anchor} className="space-y-2">
       {error && <Alert>{error}</Alert>}
       {info && <Alert kind="success">{info}</Alert>}
-    </>
-  );
+    </div>
+  ) : null;
   return { run, busy, banner };
 }
 
@@ -204,7 +209,7 @@ export function PropertyEditor() {
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{property.name}</h1><StatusBadge status={property.status} /></div>
       </div>
 
-      {property.review_note && <Alert kind="info">Message from the NearBNB team: {property.review_note}</Alert>}
+      <TeamNote status={property.status} note={property.review_note} />
       {property.status === "submitted" && <Alert kind="info">This listing is being reviewed, so it can't be edited until we decide.</Alert>}
       {property.status === "unpublished" && <Alert>This listing was taken offline by NearBNB. Contact support if you think this is a mistake.</Alert>}
       {property.pending_revisions && property.pending_revisions.length > 0 && (
@@ -238,7 +243,6 @@ export function PropertyEditor() {
 
       <Card title="Details">
         <form onSubmit={save} className="space-y-4">
-          {details.banner}
           <Field id="name" label="Property name" value={form.name ?? ""} onChange={set("name")} disabled={locked} required />
           <Select id="type_id" label="Property type" value={form.type_id ?? ""} onChange={set("type_id")} disabled={locked}>
             <option value="">Choose...</option>
@@ -269,6 +273,7 @@ export function PropertyEditor() {
           </div>
           <CancellationChoice value={form.cancellation_template_key ?? ""} onChange={(v) => setForm({ ...form, cancellation_template_key: v })} disabled={locked} />
           <TextArea id="checkin_instructions" label="Check-in instructions" rows={3} value={form.checkin_instructions ?? ""} onChange={set("checkin_instructions")} disabled={locked} hint="Door codes, parking, how to get in. Guests only see this after their booking is confirmed." />
+          {details.banner}
           {!locked && <Button type="submit" loading={details.busy}>Save details</Button>}
         </form>
       </Card>
@@ -453,12 +458,11 @@ export function UnitEditor() {
         <Link to={`/host/properties/${property.id}`} className="text-sm text-brand-600 hover:underline">← {property.name}</Link>
         <div className="mt-1 flex items-center gap-3"><h1 className="text-2xl font-bold">{unit.name}</h1><StatusBadge status={unit.status} /></div>
       </div>
-      {unit.review_note && <Alert kind="info">Message from the NearBNB team: {unit.review_note}</Alert>}
+      <TeamNote status={unit.status} note={unit.review_note} />
       {unit.status === "submitted" && <Alert kind="info">This unit is being reviewed and can't be edited until we decide.</Alert>}
 
       <Card title="Price and details">
         <form onSubmit={submitForm} className="space-y-4">
-          {save.banner}
           <Field id="u_name" label="Unit name" value={form.name ?? ""} onChange={set("name")} disabled={locked} required />
           <TextArea id="u_desc" label="Description" rows={3} value={form.description ?? ""} onChange={set("description")} disabled={locked} />
           <div className="grid grid-cols-2 gap-4">
@@ -505,6 +509,7 @@ export function UnitEditor() {
               ))}
             </div>
           </fieldset>
+          {save.banner}
           {!locked && <Button type="submit" loading={save.busy}>Save unit</Button>}
         </form>
       </Card>
