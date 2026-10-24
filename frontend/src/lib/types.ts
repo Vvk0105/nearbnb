@@ -227,6 +227,9 @@ export type AdminRevenue = {
   totals: { guest_payments: number; refunds: number; net_collected: number; service_fees: number; commission: number; platform_revenue: number; tax: number; paid_to_hosts: number; bookings: number; average_booking: number };
   series: { date: string; paid: number; refunded: number; platform_revenue: number; bookings: number }[];
   top_properties: { property: string; host: string; bookings: number; booking_value: number; platform_revenue: number }[];
+  host_id: string | null;
+  by_host: { host_id: string; host: string; email: string; bookings: number; booking_value: number; service_fees: number; commission: number; platform_revenue: number; host_earnings: number; paid_out: number }[];
+  host_options: { host_id: string; host: string }[];
 };
 export type AdminPaymentRow = {
   id: string; booking_id: string; reference: string; guest: string; amount: number; currency: string; status: string; attempt: number;

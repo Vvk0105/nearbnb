@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -75,28 +76,45 @@ def _revenue_range(date_from: str | None, date_to: str | None) -> tuple[date, da
     return first, last
 
 
-@router.get("/admin/revenue")
-async def admin_revenue(date_from: str | None = Query(None, alias="from", pattern=DAY), date_to: str | None = Query(None, alias="to", pattern=DAY),
-                        _: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
+def _host_filter(host_id: str | None):
+    if not host_id:
+        return None
+    try:
+        return uuid.UUID(host_id)
+    except ValueError:
+        raise AppError(422, "INVALID_HOST", "Unknown host.") from None
+
+
+async def _revenue(session: AsyncSession, date_from: str | None, date_to: str | None, host_id: str | None):
     first, last = _revenue_range(date_from, date_to)
     try:
-        return await service.admin_revenue(session, first, last)
+        return first, last, await service.admin_revenue(session, first, last, _host_filter(host_id))
     except ValueError as exc:
         raise AppError(422, "INVALID_RANGE", str(exc)) from None
+
+
+@router.get("/admin/revenue")
+async def admin_revenue(date_from: str | None = Query(None, alias="from", pattern=DAY), date_to: str | None = Query(None, alias="to", pattern=DAY), host_id: str | None = Query(None),
+                        _: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
+    return (await _revenue(session, date_from, date_to, host_id))[2]
 
 
 @router.get("/admin/revenue.csv")
 async def admin_revenue_csv(request: Request, date_from: str | None = Query(None, alias="from", pattern=DAY), date_to: str | None = Query(None, alias="to", pattern=DAY),
+                            host_id: str | None = Query(None), by: str = Query("day", pattern="^(day|host)$"),
                             admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
-    first, last = _revenue_range(date_from, date_to)
-    try:
-        data = await service.admin_revenue(session, first, last)
-    except ValueError as exc:
-        raise AppError(422, "INVALID_RANGE", str(exc)) from None
-    rows = [[d["date"], service.dollars(d["paid"]), service.dollars(d["refunded"]), service.dollars(d["platform_revenue"]), d["bookings"]] for d in data["series"]]
-    audit.record(session, action="export.downloaded", entity_type="export", entity_id="revenue", actor_id=admin.id, ip=client_ip(request), after={"rows": len(rows), "from": first.isoformat(), "to": last.isoformat()})
+    """`by=day` (default): one row per day. `by=host`: one row per host."""
+    first, last, data = await _revenue(session, date_from, date_to, host_id)
+    if by == "host":
+        header = ["host", "email", "bookings", "booking_value", "service_fees", "commission", "platform_revenue", "host_earnings", "paid_out"]
+        rows = [[h["host"], h["email"], h["bookings"], *(service.dollars(h[k]) for k in header[3:])] for h in data["by_host"]]
+    else:
+        header = ["date", "guest_payments", "refunds", "platform_revenue", "bookings_confirmed"]
+        rows = [[d["date"], service.dollars(d["paid"]), service.dollars(d["refunded"]), service.dollars(d["platform_revenue"]), d["bookings"]] for d in data["series"]]
+    audit.record(session, action="export.downloaded", entity_type="export", entity_id="revenue", actor_id=admin.id, ip=client_ip(request),
+                 after={"rows": len(rows), "from": first.isoformat(), "to": last.isoformat(), "by": by, "host_id": host_id})
     await session.commit()
-    return _csv(f"nearbnb-revenue-{first.isoformat()}-to-{last.isoformat()}.csv", ["date", "guest_payments", "refunds", "platform_revenue", "bookings_confirmed"], rows)
+    return _csv(f"nearbnb-revenue-by-{by}-{first.isoformat()}-to-{last.isoformat()}.csv", header, rows)
 
 
 @router.get("/admin/payments")

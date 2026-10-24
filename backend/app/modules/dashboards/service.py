@@ -228,8 +228,8 @@ def _snap(key: str):
     return cast(Booking.pricing_snapshot[key].astext, Integer)
 
 
-async def admin_revenue(session: AsyncSession, first: date, last: date) -> dict:
-    """Money for a date range (UTC days, both ends included).
+async def admin_revenue(session: AsyncSession, first: date, last: date, host_id: uuid.UUID | None = None) -> dict:
+    """Money for a date range (UTC days, both ends included), for everyone or for one host (`host_id` = a host profile id).
 
     Definitions, shown to the admin on the page:
       * guest payments: card payments that succeeded in the range
@@ -247,21 +247,35 @@ async def admin_revenue(session: AsyncSession, first: date, last: date) -> dict:
     end = datetime(last.year, last.month, last.day, tzinfo=UTC) + timedelta(days=1)
 
     confirmed = [Booking.confirmed_at >= start, Booking.confirmed_at < end, Booking.status.in_(REVENUE_STATUSES)]
-    gross = (await session.execute(select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "succeeded", Payment.succeeded_at >= start, Payment.succeeded_at < end))).scalar_one()
-    refunded = (await session.execute(select(func.coalesce(func.sum(Refund.amount), 0)).where(Refund.status.in_(("pending", "succeeded")), Refund.created_at >= start, Refund.created_at < end))).scalar_one()
+    if host_id:
+        confirmed.append(Booking.host_id == host_id)
+
+    def of_host(query, join_booking_on=None):
+        """Narrows a payments / refunds / transfers query to one host's bookings."""
+        if not host_id:
+            return query
+        if join_booking_on is None:  # transfers carry the host directly
+            return query.where(Transfer.host_id == host_id)
+        return query.join(Booking, Booking.id == join_booking_on).where(Booking.host_id == host_id)
+
+    paid_filter = [Payment.status == "succeeded", Payment.succeeded_at >= start, Payment.succeeded_at < end]
+    refund_filter = [Refund.status.in_(("pending", "succeeded")), Refund.created_at >= start, Refund.created_at < end]
+    paid_out_filter = [Transfer.status == TR_TRANSFERRED, Transfer.transferred_at >= start, Transfer.transferred_at < end]
+
+    gross = (await session.execute(of_host(select(func.coalesce(func.sum(Payment.amount), 0)).where(*paid_filter), Payment.booking_id))).scalar_one()
+    refunded = (await session.execute(of_host(select(func.coalesce(func.sum(Refund.amount), 0)).where(*refund_filter), Refund.booking_id))).scalar_one()
     fees, commission, tax, total, count = (await session.execute(
         select(func.coalesce(func.sum(_snap("service_fee")), 0), func.coalesce(func.sum(_snap("commission")), 0), func.coalesce(func.sum(_snap("tax")), 0),
                func.coalesce(func.sum(_snap("total")), 0), func.count()).where(*confirmed))).one()
-    paid_to_hosts = (await session.execute(
-        select(func.coalesce(func.sum(Transfer.amount - Transfer.reversed_amount), 0)).where(Transfer.status == TR_TRANSFERRED, Transfer.transferred_at >= start, Transfer.transferred_at < end))).scalar_one()
+    paid_to_hosts = (await session.execute(of_host(select(func.coalesce(func.sum(Transfer.amount - Transfer.reversed_amount), 0)).where(*paid_out_filter)))).scalar_one()
 
     # one row per day, zeros included, so the chart has no gaps
     def day(col):
         # 'UTC' is written into the SQL (not sent as a parameter) so Postgres sees the SELECT and GROUP BY expressions as identical
         return func.date(func.timezone(literal_column("'UTC'"), col))
 
-    paid_by_day = dict((await session.execute(select(day(Payment.succeeded_at), func.sum(Payment.amount)).where(Payment.status == "succeeded", Payment.succeeded_at >= start, Payment.succeeded_at < end).group_by(day(Payment.succeeded_at)))).all())
-    refunded_by_day = dict((await session.execute(select(day(Refund.created_at), func.sum(Refund.amount)).where(Refund.status.in_(("pending", "succeeded")), Refund.created_at >= start, Refund.created_at < end).group_by(day(Refund.created_at)))).all())
+    paid_by_day = dict((await session.execute(of_host(select(day(Payment.succeeded_at), func.sum(Payment.amount)).where(*paid_filter).group_by(day(Payment.succeeded_at)), Payment.booking_id))).all())
+    refunded_by_day = dict((await session.execute(of_host(select(day(Refund.created_at), func.sum(Refund.amount)).where(*refund_filter).group_by(day(Refund.created_at)), Refund.booking_id))).all())
     revenue_by_day = {d: (int(f) + int(c), int(n)) for d, f, c, n in (await session.execute(
         select(day(Booking.confirmed_at), func.sum(_snap("service_fee")), func.sum(_snap("commission")), func.count()).where(*confirmed).group_by(day(Booking.confirmed_at)))).all()}
     series = []
@@ -278,8 +292,30 @@ async def admin_revenue(session: AsyncSession, first: date, last: date) -> dict:
             .where(*confirmed).group_by(Property.id, Property.name, User.full_name)
             .order_by((func.sum(_snap("service_fee")) + func.sum(_snap("commission"))).desc()).limit(10))).all()
     ]
+
+    # every host with activity in the period: what they brought in, what we earned from them, what they earned, what was sent to them
+    by_host: dict[uuid.UUID, dict] = {}
+    for hid, name, email, n, value, f, c, earned in (await session.execute(
+        select(HostProfile.id, User.full_name, User.email, func.count(), func.sum(_snap("total")), func.sum(_snap("service_fee")), func.sum(_snap("commission")), func.sum(_snap("host_payable")))
+        .join(HostProfile, HostProfile.id == Booking.host_id).join(User, User.id == HostProfile.user_id)
+        .where(*confirmed).group_by(HostProfile.id, User.full_name, User.email))).all():
+        by_host[hid] = {"host_id": str(hid), "host": name, "email": email, "bookings": int(n), "booking_value": int(value), "service_fees": int(f), "commission": int(c),
+                        "platform_revenue": int(f) + int(c), "host_earnings": int(earned or 0), "paid_out": 0}
+    sent_q = (select(HostProfile.id, User.full_name, User.email, func.sum(Transfer.amount - Transfer.reversed_amount))
+              .join(HostProfile, HostProfile.id == Transfer.host_id).join(User, User.id == HostProfile.user_id).where(*paid_out_filter).group_by(HostProfile.id, User.full_name, User.email))
+    if host_id:
+        sent_q = sent_q.where(Transfer.host_id == host_id)
+    for hid, name, email, sent in (await session.execute(sent_q)).all():
+        row = by_host.setdefault(hid, {"host_id": str(hid), "host": name, "email": email, "bookings": 0, "booking_value": 0, "service_fees": 0, "commission": 0,
+                                       "platform_revenue": 0, "host_earnings": 0, "paid_out": 0})
+        row["paid_out"] = int(sent or 0)
+    hosts = sorted(by_host.values(), key=lambda r: (-r["platform_revenue"], -r["paid_out"], r["host"]))
+
+    # for the host picker: every host who has ever had a booking
+    options = [{"host_id": str(hid), "host": name} for hid, name in (await session.execute(
+        select(HostProfile.id, User.full_name).join(User, User.id == HostProfile.user_id).where(HostProfile.id.in_(select(Booking.host_id).distinct())).order_by(User.full_name))).all()]
     return {
-        "from": first.isoformat(), "to": last.isoformat(), "currency": "AUD",
+        "from": first.isoformat(), "to": last.isoformat(), "currency": "AUD", "host_id": str(host_id) if host_id else None,
         "totals": {
             "guest_payments": int(gross), "refunds": int(refunded), "net_collected": int(gross) - int(refunded),
             "service_fees": int(fees), "commission": int(commission), "platform_revenue": int(fees) + int(commission),
@@ -288,6 +324,8 @@ async def admin_revenue(session: AsyncSession, first: date, last: date) -> dict:
         },
         "series": series,
         "top_properties": top_properties,
+        "by_host": hosts,
+        "host_options": options,
     }
 
 

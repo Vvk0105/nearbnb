@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, apiUrl } from "../../lib/api";
 import { money, todayIso } from "../../lib/format";
 import type { AdminRevenue } from "../../lib/types";
-import { Alert, Field, errorMessage } from "../../components/ui";
+import { Alert, Field, Select, errorMessage } from "../../components/ui";
 import { AreaChart, BarChart } from "../../components/charts";
 import { Icon } from "../../components/icons";
 import { EmptyState, Kpi, Panel } from "../../components/dashboardUi";
@@ -38,13 +39,16 @@ export function AdminRevenuePage() {
   const [preset, setPreset] = useState("30");
   const [from, setFrom] = useState(PRESETS[1].range()[0]);
   const [to, setTo] = useState(PRESETS[1].range()[1]);
+  const [hostId, setHostId] = useState("");
   const valid = from !== "" && to !== "" && from <= to;
+  const hostPart = hostId ? `&host_id=${hostId}` : "";
   const { data, error, isLoading, isFetching } = useQuery({
-    queryKey: ["admin-revenue", from, to],
-    queryFn: () => api<AdminRevenue>(`/admin/revenue?from=${from}&to=${to}`),
+    queryKey: ["admin-revenue", from, to, hostId],
+    queryFn: () => api<AdminRevenue>(`/admin/revenue?from=${from}&to=${to}${hostPart}`),
     enabled: valid,
     placeholderData: (prev) => prev,
   });
+  const chosenHost = data?.host_options.find((h) => h.host_id === hostId);
 
   const choose = (p: Preset) => {
     const [a, b] = p.range();
@@ -60,7 +64,7 @@ export function AdminRevenuePage() {
     <div className="space-y-6">
       <Panel
         title="Date range"
-        action={valid && <a href={apiUrl(`/admin/revenue.csv?from=${from}&to=${to}`)} download className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"><Icon name="download" className="h-4 w-4" /> Download CSV</a>}
+        action={valid && <a href={apiUrl(`/admin/revenue.csv?from=${from}&to=${to}${hostPart}`)} download className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"><Icon name="download" className="h-4 w-4" /> Download CSV</a>}
       >
         <div className="flex flex-wrap items-end gap-2">
           {PRESETS.map((p) => (
@@ -79,8 +83,21 @@ export function AdminRevenuePage() {
             <Field id="rev-to" label="To" type="date" value={to} min={from || undefined} onChange={(e) => { setPreset("custom"); setTo(e.target.value); }} />
           </div>
         </div>
+        <div className="mt-4 max-w-xs">
+          <Select id="rev-host" label="Host" value={hostId} onChange={(e) => setHostId(e.target.value)}>
+            <option value="">All hosts</option>
+            {data?.host_options.map((h) => <option key={h.host_id} value={h.host_id}>{h.host}</option>)}
+          </Select>
+        </div>
         {!valid && <div className="mt-3"><Alert>Choose a start date that is on or before the end date.</Alert></div>}
       </Panel>
+
+      {hostId && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          Showing numbers for <strong>{chosenHost?.host ?? "one host"}</strong> only.
+          <button type="button" className="text-brand-700 underline" onClick={() => setHostId("")}>Show all hosts</button>
+        </p>
+      )}
 
       {error && <Alert>{errorMessage(error)}</Alert>}
       {isLoading && valid && <p className="text-slate-500">Loading...</p>}
@@ -105,6 +122,38 @@ export function AdminRevenuePage() {
               <BarChart points={series.map((d) => ({ label: d.date, value: d.paid }))} format={(v) => money(v, cur)} ariaLabel="Guest payments per day" />
             </Panel>
           </div>
+
+          <Panel
+            title="Revenue by host"
+            action={<a href={apiUrl(`/admin/revenue.csv?from=${from}&to=${to}${hostPart}&by=host`)} download className="text-sm text-brand-700 hover:underline">Download by host (CSV)</a>}
+          >
+            {data.by_host.length === 0 ? (
+              <EmptyState icon="host" title="No host activity in this period" />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Host</th><th className="text-right">Bookings</th><th className="text-right">Booking value</th><th className="text-right">Service fees</th><th className="text-right">Commission</th><th className="text-right">Platform revenue</th><th className="text-right">Host earnings</th><th className="text-right">Paid out</th></tr>
+                  </thead>
+                  <tbody>
+                    {data.by_host.map((h) => (
+                      <tr key={h.host_id}>
+                        <td><Link to={`/admin/hosts/${h.host_id}`}>{h.host}</Link><span className="block text-xs text-slate-500">{h.email}</span></td>
+                        <td className="text-right">{h.bookings}</td>
+                        <td className="text-right">{money(h.booking_value, cur)}</td>
+                        <td className="text-right">{money(h.service_fees, cur)}</td>
+                        <td className="text-right">{money(h.commission, cur)}</td>
+                        <td className="text-right font-medium">{money(h.platform_revenue, cur)}</td>
+                        <td className="text-right">{money(h.host_earnings, cur)}</td>
+                        <td className="text-right">{money(h.paid_out, cur)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="mt-3 text-xs text-slate-500">Host earnings is what the host receives from bookings confirmed in the period (price minus our commission). Paid out is what was actually sent to them in the period.</p>
+          </Panel>
 
           <Panel title="Top properties">
             {data.top_properties.length === 0 ? (

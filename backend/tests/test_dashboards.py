@@ -473,3 +473,56 @@ async def test_only_admins_can_see_revenue(new_client, make_admin, db, spy):
     for who in (w.guest, w.host, await new_client()):
         assert (await who.get(f"{API}/admin/revenue")).status_code in (401, 403)
         assert (await who.get(f"{API}/admin/revenue.csv")).status_code in (401, 403)
+
+
+async def test_revenue_can_be_split_by_host_and_limited_to_one_host(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    host2, host2_id = await active_host(new_client, w.admin, "host2@example.com")
+    unit2 = (await live_listing(host2, w.admin, quantity=1))["units"][0]
+    guest2 = await complete_guest(new_client, "guest2@example.com")
+    b2 = (await book(guest2, unit2, days=12)).json()
+    assert (await host2.post(f"{API}/host/bookings/{b2['id']}/accept", headers=csrf_headers(host2))).status_code == 200
+    assert (await dev_complete(guest2, b2["id"])).json()["outcome"] == "confirmed"
+
+    everyone = await get(w.admin, "/admin/revenue")
+    assert everyone["totals"]["bookings"] == 2 and len(everyone["by_host"]) == 2 and everyone["host_id"] is None
+    assert sum(h["platform_revenue"] for h in everyone["by_host"]) == everyone["totals"]["platform_revenue"]
+    assert sum(h["bookings"] for h in everyone["by_host"]) == 2
+    assert {o["host_id"] for o in everyone["host_options"]} == {w.host_id, host2_id}
+    ordered = [h["platform_revenue"] for h in everyone["by_host"]]
+    assert ordered == sorted(ordered, reverse=True)                            # biggest earner first
+
+    one = await get(w.admin, f"/admin/revenue?host_id={w.host_id}")
+    assert one["host_id"] == w.host_id and one["totals"]["bookings"] == 1
+    assert (one["totals"]["guest_payments"], one["totals"]["platform_revenue"]) == (29563, 4875)
+    (row,) = one["by_host"]
+    assert row["host_id"] == w.host_id and row["bookings"] == 1 and row["booking_value"] == 29563
+    assert row["service_fees"] == 1875 and row["commission"] == 3000 and row["host_earnings"] > 0
+    assert one["series"][-1]["paid"] == 29563 and len(one["top_properties"]) == 1
+    assert {o["host_id"] for o in one["host_options"]} == {w.host_id, host2_id}   # the picker still lists everyone
+
+
+async def test_a_host_with_nothing_in_the_period_shows_zeros_and_an_unknown_id_is_refused(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    none = await get(w.admin, f"/admin/revenue?host_id={uuid.uuid4()}")
+    assert none["totals"]["platform_revenue"] == 0 and none["totals"]["guest_payments"] == 0 and none["by_host"] == []
+    bad = await w.admin.get(f"{API}/admin/revenue?host_id=not-a-uuid")
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "INVALID_HOST"
+
+
+async def test_a_payout_shows_against_the_host_it_was_sent_to(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    await shift(db, w.id, -30)
+    assert (await release())["paid"] == 1
+    data = await get(w.admin, f"/admin/revenue?host_id={w.host_id}")
+    assert data["totals"]["paid_to_hosts"] == 22000 and data["by_host"][0]["paid_out"] == 22000
+
+
+async def test_the_revenue_csv_can_be_one_row_per_host(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    today = datetime.now(UTC).date().isoformat()
+    rows = parse(await w.admin.get(f"{API}/admin/revenue.csv?from={today}&to={today}&by=host"))
+    assert rows[0] == ["host", "email", "bookings", "booking_value", "service_fees", "commission", "platform_revenue", "host_earnings", "paid_out"]
+    assert len(rows) == 2 and rows[1][1] == "host@example.com" and rows[1][2:5] == ["1", "295.63", "18.75"] and rows[1][6] == "48.75"
+    bad = await w.admin.get(f"{API}/admin/revenue.csv?by=month")
+    assert bad.status_code == 422
