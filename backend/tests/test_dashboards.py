@@ -404,3 +404,72 @@ async def test_the_dashboard_trend_has_one_row_per_day_with_todays_bookings_and_
     assert [t["date"] for t in trend] == sorted(t["date"] for t in trend)
     assert trend[-1]["bookings"] == 1 and trend[-1]["paid"] == 29563
     assert sum(t["bookings"] for t in trend[:-1]) == 0 and sum(t["paid"] for t in trend[:-1]) == 0
+
+
+# ---------- admin revenue ----------
+
+async def test_the_revenue_page_adds_up_a_paid_booking_from_its_stored_price(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    data = await get(w.admin, "/admin/revenue")
+    t = data["totals"]
+    assert (t["guest_payments"], t["refunds"], t["net_collected"]) == (29563, 0, 29563)
+    assert (t["service_fees"], t["commission"], t["platform_revenue"]) == (1875, 3000, 4875)
+    assert t["bookings"] == 1 and t["average_booking"] == 29563 and t["paid_to_hosts"] == 0
+    assert data["currency"] == "AUD" and len(data["series"]) == 30
+    today = data["series"][-1]
+    assert today == {"date": datetime.now(UTC).date().isoformat(), "paid": 29563, "refunded": 0, "platform_revenue": 4875, "bookings": 1}
+    assert sum(d["paid"] for d in data["series"][:-1]) == 0
+    (top,) = data["top_properties"]
+    assert top["property"] == w.prop["name"] and top["host"] and (top["bookings"], top["booking_value"], top["platform_revenue"]) == (1, 29563, 4875)
+
+
+async def test_revenue_counts_what_happened_inside_the_chosen_dates_only(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    old = await get(w.admin, "/admin/revenue?from=2000-01-01&to=2000-01-31")
+    assert len(old["series"]) == 31 and old["totals"]["platform_revenue"] == 0 and old["totals"]["bookings"] == 0 and old["top_properties"] == []
+    today = datetime.now(UTC).date().isoformat()
+    exact = await get(w.admin, f"/admin/revenue?from={today}&to={today}")
+    assert len(exact["series"]) == 1 and exact["totals"]["platform_revenue"] == 4875
+
+
+async def test_a_payout_is_counted_on_the_day_it_is_sent(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    assert (await get(w.admin, "/admin/revenue"))["totals"]["paid_to_hosts"] == 0
+    await shift(db, w.id, -30)
+    assert (await release())["paid"] == 1
+    assert (await get(w.admin, "/admin/revenue"))["totals"]["paid_to_hosts"] == 22000
+
+
+async def test_a_refund_is_counted_on_the_day_it_is_made_and_lowers_net_collected(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    await cancel(w.guest, w.id)                                     # ten days ahead: a full refund of the accommodation
+    t = (await get(w.admin, "/admin/revenue"))["totals"]
+    assert t["refunds"] > 0 and t["net_collected"] == t["guest_payments"] - t["refunds"]
+    assert t["bookings"] == 0 and t["platform_revenue"] == 0         # a cancelled booking is not counted as revenue
+    today = (await get(w.admin, "/admin/revenue"))["series"][-1]
+    assert today["refunded"] == t["refunds"]
+
+
+async def test_the_revenue_range_is_checked(new_client, make_admin):
+    admin = await admin_client(new_client, make_admin)
+    backwards = await admin.get(f"{API}/admin/revenue?from=2026-02-01&to=2026-01-01")
+    assert backwards.status_code == 422 and backwards.json()["error"]["code"] == "INVALID_RANGE"
+    too_long = await admin.get(f"{API}/admin/revenue?from=2020-01-01&to=2026-01-01")
+    assert too_long.status_code == 422
+    assert (await admin.get(f"{API}/admin/revenue?from=yesterday")).status_code == 422
+
+
+async def test_the_revenue_csv_has_one_row_per_day_and_is_logged(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    rows = parse(await w.admin.get(f"{API}/admin/revenue.csv?from={datetime.now(UTC).date().isoformat()}&to={datetime.now(UTC).date().isoformat()}"))
+    assert rows[0] == ["date", "guest_payments", "refunds", "platform_revenue", "bookings_confirmed"]
+    assert rows[1][1:] == ["295.63", "0.00", "48.75", "1"]
+    log = (await db.execute(select(AuditLog).where(AuditLog.action == "export.downloaded", AuditLog.entity_id == "revenue"))).scalars().all()
+    assert len(log) == 1
+
+
+async def test_only_admins_can_see_revenue(new_client, make_admin, db, spy):
+    w = await paid_world(new_client, make_admin)
+    for who in (w.guest, w.host, await new_client()):
+        assert (await who.get(f"{API}/admin/revenue")).status_code in (401, 403)
+        assert (await who.get(f"{API}/admin/revenue.csv")).status_code in (401, 403)

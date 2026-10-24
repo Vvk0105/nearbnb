@@ -14,6 +14,7 @@ import { AdminBookingDetailPage } from "./pages/admin/AdminBookingDetailPage";
 import { AdminCalendarPage } from "./pages/admin/AdminCalendarPage";
 import { AdminCancellationPage } from "./pages/admin/AdminCancellationPage";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminRevenuePage } from "./pages/admin/AdminRevenuePage";
 import { AdminExportsPage, AdminPaymentsPage, AdminPayoutsPage, AdminWebhooksPage } from "./pages/admin/AdminMoneyPages";
 import { AdminIssuesPage, AdminReviewsPage } from "./pages/admin/AdminReviewsIssuesPages";
 import { AdminUserDetailPage, AdminUsersPage } from "./pages/admin/AdminUsersPages";
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="bookings/:bookingId" element={<AdminBookingDetailPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="users/:userId" element={<AdminUserDetailPage />} />
+          <Route path="revenue" element={<AdminRevenuePage />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="payouts" element={<AdminPayoutsPage />} />
           <Route path="calendar" element={<AdminCalendarPage />} />

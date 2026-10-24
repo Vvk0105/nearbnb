@@ -123,7 +123,7 @@ export function AdminDashboardPage() {
           </ul>
         </Panel>
 
-        <Panel title="Money, last 30 days">
+        <Panel title="Money, last 30 days" action={<Link to="/admin/revenue" className="text-sm text-brand-700 hover:underline">Open revenue</Link>}>
           <dl className="grid grid-cols-2 gap-3">
             <Stat label="Paid by guests" value={money(m.gross_paid, cur)} />
             <Stat label="Refunded" value={money(m.refunded, cur)} />

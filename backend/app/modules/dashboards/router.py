@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import select
@@ -62,6 +62,41 @@ async def host_money_export(month: str | None = Query(None, pattern=MONTH), user
 @router.get("/admin/dashboard")
 async def admin_dashboard(_: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
     return await service.admin_dashboard(session)
+
+
+def _revenue_range(date_from: str | None, date_to: str | None) -> tuple[date, date]:
+    """Defaults to the last 30 days (today included)."""
+    today = datetime.now(UTC).date()
+    try:
+        last = date.fromisoformat(date_to) if date_to else today
+        first = date.fromisoformat(date_from) if date_from else last - timedelta(days=29)
+    except ValueError:
+        raise AppError(422, "INVALID_DATE", "Use the format YYYY-MM-DD.") from None
+    return first, last
+
+
+@router.get("/admin/revenue")
+async def admin_revenue(date_from: str | None = Query(None, alias="from", pattern=DAY), date_to: str | None = Query(None, alias="to", pattern=DAY),
+                        _: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
+    first, last = _revenue_range(date_from, date_to)
+    try:
+        return await service.admin_revenue(session, first, last)
+    except ValueError as exc:
+        raise AppError(422, "INVALID_RANGE", str(exc)) from None
+
+
+@router.get("/admin/revenue.csv")
+async def admin_revenue_csv(request: Request, date_from: str | None = Query(None, alias="from", pattern=DAY), date_to: str | None = Query(None, alias="to", pattern=DAY),
+                            admin: User = Depends(require_admin), session: AsyncSession = Depends(get_session)):
+    first, last = _revenue_range(date_from, date_to)
+    try:
+        data = await service.admin_revenue(session, first, last)
+    except ValueError as exc:
+        raise AppError(422, "INVALID_RANGE", str(exc)) from None
+    rows = [[d["date"], service.dollars(d["paid"]), service.dollars(d["refunded"]), service.dollars(d["platform_revenue"]), d["bookings"]] for d in data["series"]]
+    audit.record(session, action="export.downloaded", entity_type="export", entity_id="revenue", actor_id=admin.id, ip=client_ip(request), after={"rows": len(rows), "from": first.isoformat(), "to": last.isoformat()})
+    await session.commit()
+    return _csv(f"nearbnb-revenue-{first.isoformat()}-to-{last.isoformat()}.csv", ["date", "guest_payments", "refunds", "platform_revenue", "bookings_confirmed"], rows)
 
 
 @router.get("/admin/payments")

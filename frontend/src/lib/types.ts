@@ -222,6 +222,12 @@ export type AdminDashboardData = {
   totals: { users: number; hosts: number; properties: number };
   recent: { id: number; action: string; entity_type: string; entity_id: string | null; actor: string | null; at: string; reason: string | null }[];
 };
+export type AdminRevenue = {
+  from: string; to: string; currency: string;
+  totals: { guest_payments: number; refunds: number; net_collected: number; service_fees: number; commission: number; platform_revenue: number; tax: number; paid_to_hosts: number; bookings: number; average_booking: number };
+  series: { date: string; paid: number; refunded: number; platform_revenue: number; bookings: number }[];
+  top_properties: { property: string; host: string; bookings: number; booking_value: number; platform_revenue: number }[];
+};
 export type AdminPaymentRow = {
   id: string; booking_id: string; reference: string; guest: string; amount: number; currency: string; status: string; attempt: number;
   failure_code: string | null; failure_message: string | null; intent_id: string; charge_id: string | null; created_at: string; succeeded_at: string | null;

@@ -2,7 +2,7 @@
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import Integer, and_, cast, func, or_, select
+from sqlalchemy import Integer, and_, cast, func, literal_column, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.models import AuditLog
@@ -215,6 +215,79 @@ async def admin_dashboard(session: AsyncSession) -> dict:
         "money_30_days": {"gross_paid": int(gross), "refunded": int(refunded), "net_collected": int(gross) - int(refunded), "service_fees": int(fee_rows[0]), "commission": int(fee_rows[1])},
         "totals": {"users": await count(User), "hosts": await count(HostProfile), "properties": await count(Property, Property.status == "approved")},
         "recent": [{"id": a.id, "action": a.action, "entity_type": a.entity_type, "entity_id": a.entity_id, "actor": email, "at": a.created_at.isoformat(), "reason": a.reason} for a, email in recent],
+    }
+
+
+# ---------- admin: revenue ----------
+
+REVENUE_STATUSES = (B_CONFIRMED, B_CHECKED_IN, B_COMPLETED)
+MAX_REVENUE_DAYS = 366
+
+
+def _snap(key: str):
+    return cast(Booking.pricing_snapshot[key].astext, Integer)
+
+
+async def admin_revenue(session: AsyncSession, first: date, last: date) -> dict:
+    """Money for a date range (UTC days, both ends included).
+
+    Definitions, shown to the admin on the page:
+      * guest payments: card payments that succeeded in the range
+      * refunds: refunds created in the range (pending or done)
+      * service fees and commission: taken from the price stored on each booking, for bookings CONFIRMED in the range
+        and not cancelled, before any later refund
+      * platform revenue: service fees + commission
+      * paid to hosts: transfers sent to hosts in the range, minus anything taken back
+    """
+    if last < first:
+        raise ValueError("The end date is before the start date.")
+    if (last - first).days + 1 > MAX_REVENUE_DAYS:
+        raise ValueError(f"Choose a range of at most {MAX_REVENUE_DAYS} days.")
+    start = datetime(first.year, first.month, first.day, tzinfo=UTC)
+    end = datetime(last.year, last.month, last.day, tzinfo=UTC) + timedelta(days=1)
+
+    confirmed = [Booking.confirmed_at >= start, Booking.confirmed_at < end, Booking.status.in_(REVENUE_STATUSES)]
+    gross = (await session.execute(select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == "succeeded", Payment.succeeded_at >= start, Payment.succeeded_at < end))).scalar_one()
+    refunded = (await session.execute(select(func.coalesce(func.sum(Refund.amount), 0)).where(Refund.status.in_(("pending", "succeeded")), Refund.created_at >= start, Refund.created_at < end))).scalar_one()
+    fees, commission, tax, total, count = (await session.execute(
+        select(func.coalesce(func.sum(_snap("service_fee")), 0), func.coalesce(func.sum(_snap("commission")), 0), func.coalesce(func.sum(_snap("tax")), 0),
+               func.coalesce(func.sum(_snap("total")), 0), func.count()).where(*confirmed))).one()
+    paid_to_hosts = (await session.execute(
+        select(func.coalesce(func.sum(Transfer.amount - Transfer.reversed_amount), 0)).where(Transfer.status == TR_TRANSFERRED, Transfer.transferred_at >= start, Transfer.transferred_at < end))).scalar_one()
+
+    # one row per day, zeros included, so the chart has no gaps
+    def day(col):
+        # 'UTC' is written into the SQL (not sent as a parameter) so Postgres sees the SELECT and GROUP BY expressions as identical
+        return func.date(func.timezone(literal_column("'UTC'"), col))
+
+    paid_by_day = dict((await session.execute(select(day(Payment.succeeded_at), func.sum(Payment.amount)).where(Payment.status == "succeeded", Payment.succeeded_at >= start, Payment.succeeded_at < end).group_by(day(Payment.succeeded_at)))).all())
+    refunded_by_day = dict((await session.execute(select(day(Refund.created_at), func.sum(Refund.amount)).where(Refund.status.in_(("pending", "succeeded")), Refund.created_at >= start, Refund.created_at < end).group_by(day(Refund.created_at)))).all())
+    revenue_by_day = {d: (int(f) + int(c), int(n)) for d, f, c, n in (await session.execute(
+        select(day(Booking.confirmed_at), func.sum(_snap("service_fee")), func.sum(_snap("commission")), func.count()).where(*confirmed).group_by(day(Booking.confirmed_at)))).all()}
+    series = []
+    for i in range((last - first).days + 1):
+        d = first + timedelta(days=i)
+        rev, n = revenue_by_day.get(d, (0, 0))
+        series.append({"date": d.isoformat(), "paid": int(paid_by_day.get(d, 0)), "refunded": int(refunded_by_day.get(d, 0)), "platform_revenue": rev, "bookings": n})
+
+    top_properties = [
+        {"property": name, "host": host_name, "bookings": int(n), "booking_value": int(value), "platform_revenue": int(f) + int(c)}
+        for name, host_name, n, value, f, c in (await session.execute(
+            select(Property.name, User.full_name, func.count(), func.sum(_snap("total")), func.sum(_snap("service_fee")), func.sum(_snap("commission")))
+            .join(Property, Property.id == Booking.property_id).join(HostProfile, HostProfile.id == Booking.host_id).join(User, User.id == HostProfile.user_id)
+            .where(*confirmed).group_by(Property.id, Property.name, User.full_name)
+            .order_by((func.sum(_snap("service_fee")) + func.sum(_snap("commission"))).desc()).limit(10))).all()
+    ]
+    return {
+        "from": first.isoformat(), "to": last.isoformat(), "currency": "AUD",
+        "totals": {
+            "guest_payments": int(gross), "refunds": int(refunded), "net_collected": int(gross) - int(refunded),
+            "service_fees": int(fees), "commission": int(commission), "platform_revenue": int(fees) + int(commission),
+            "tax": int(tax), "paid_to_hosts": int(paid_to_hosts), "bookings": int(count),
+            "average_booking": int(total) // int(count) if count else 0,
+        },
+        "series": series,
+        "top_properties": top_properties,
     }
 
 

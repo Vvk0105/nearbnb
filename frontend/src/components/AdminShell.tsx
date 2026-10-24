@@ -17,6 +17,7 @@ const GROUPS: Group[] = [
   ] },
   { title: "Bookings & money", items: [
     { to: "/admin/bookings", label: "Bookings", icon: "booking" },
+    { to: "/admin/revenue", label: "Revenue", icon: "money" },
     { to: "/admin/payments", label: "Payments", icon: "card", badge: ["failed_payments"] },
     { to: "/admin/payouts", label: "Payouts", icon: "wallet", badge: ["failed_payouts"] },
     { to: "/admin/refunds", label: "Refunds", icon: "refund", badge: ["refund_requests", "failed_refunds"] },
