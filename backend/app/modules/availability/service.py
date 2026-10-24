@@ -33,6 +33,9 @@ class StayRules:
     max_advance_days: int
     checkin_from: time
     checkin_to: time
+    stay_mode: str = "flexible"          # "flexible" or "fixed" (see Unit)
+    fixed_checkin: time | None = None
+    fixed_checkout: time | None = None
 
 
 @dataclass(frozen=True)
@@ -95,11 +98,29 @@ def rules_for(unit: Unit, globals_: dict[str, Any], overrides: dict[str, Any] | 
         max_advance_days=o.get("booking.max_advance_days", globals_["booking.max_advance_days"]),
         checkin_from=unit.checkin_from,
         checkin_to=unit.checkin_to,
+        stay_mode=unit.stay_mode if unit.stay_mode == "fixed" and unit.fixed_checkin_time and unit.fixed_checkout_time else "flexible",
+        fixed_checkin=unit.fixed_checkin_time,
+        fixed_checkout=unit.fixed_checkout_time,
     )
 
 
 def _t(value: time) -> str:
     return f"{value.hour % 12 or 12}:{value:%M} {value:%p}"
+
+
+def stay_period(rules: StayRules, tz: ZoneInfo, checkin_local: datetime, hours: int) -> tuple[datetime, datetime]:
+    """(check-in, check-out) in UTC for a stay.
+
+    Flexible: exactly `hours` after the chosen check-in time.
+    Fixed: the guest's chosen DATE at the unit's check-in time, and `hours // 24` nights later at the unit's check-out time,
+    so the stay can be shorter than whole 24-hour blocks (check in 12:00, check out 11:30 = 23.5 hours per night)."""
+    if rules.stay_mode == "fixed" and rules.fixed_checkin and rules.fixed_checkout:
+        nights = hours // 24
+        start = datetime.combine(checkin_local.date(), rules.fixed_checkin)
+        end = datetime.combine(checkin_local.date() + timedelta(days=nights), rules.fixed_checkout)
+        return to_utc(start, tz), to_utc(end, tz)
+    start_utc = to_utc(checkin_local, tz)
+    return start_utc, start_utc + timedelta(hours=hours)
 
 
 def check_stay(rules: StayRules, capacity: int, tz: ZoneInfo, checkin_local: datetime, hours: int, guests: int, now: datetime) -> Violation | None:
@@ -110,11 +131,14 @@ def check_stay(rules: StayRules, capacity: int, tz: ZoneInfo, checkin_local: dat
         return Violation("STAY_TOO_LONG", f"The longest stay here is {rules.max_stay_hours // 24} days.")
     if guests > capacity:
         return Violation("OVER_CAPACITY", f"This place sleeps up to {capacity} guests.")
-    if checkin_local.second or checkin_local.minute % rules.interval_minutes:
-        step = "on the hour (for example 2:00 PM)" if rules.interval_minutes == 60 else f"every {rules.interval_minutes} minutes"
-        return Violation("INVALID_TIME_STEP", f"Check-in is available {step}.")
-    if not (rules.checkin_from <= checkin_local.time() <= rules.checkin_to):
-        return Violation("OUTSIDE_CHECKIN_HOURS", f"Check-in is only possible between {_t(rules.checkin_from)} and {_t(rules.checkin_to)}.")
+    if rules.stay_mode == "fixed" and rules.fixed_checkin:
+        checkin_local = datetime.combine(checkin_local.date(), rules.fixed_checkin)  # the guest picks the date; the unit sets the time
+    else:
+        if checkin_local.second or checkin_local.minute % rules.interval_minutes:
+            step = "on the hour (for example 2:00 PM)" if rules.interval_minutes == 60 else f"every {rules.interval_minutes} minutes"
+            return Violation("INVALID_TIME_STEP", f"Check-in is available {step}.")
+        if not (rules.checkin_from <= checkin_local.time() <= rules.checkin_to):
+            return Violation("OUTSIDE_CHECKIN_HOURS", f"Check-in is only possible between {_t(rules.checkin_from)} and {_t(rules.checkin_to)}.")
     checkin_utc = to_utc(checkin_local, tz)
     if checkin_utc <= now:
         return Violation("IN_THE_PAST", "Check-in must be in the future.")
@@ -289,18 +313,22 @@ async def alternatives(session: AsyncSession, unit: Unit, prop: Property, rules:
     found: list[dict] = []
     for offset in range(scan_days + 1):
         day = first_day + timedelta(days=offset)
-        minute = rules.checkin_from.hour * 60 + rules.checkin_from.minute
-        minute -= minute % rules.interval_minutes
-        last = rules.checkin_to.hour * 60 + rules.checkin_to.minute
+        if rules.stay_mode == "fixed" and rules.fixed_checkin:
+            minute = last = rules.fixed_checkin.hour * 60 + rules.fixed_checkin.minute
+            step = 1
+        else:
+            minute = rules.checkin_from.hour * 60 + rules.checkin_from.minute
+            minute -= minute % rules.interval_minutes
+            last = rules.checkin_to.hour * 60 + rules.checkin_to.minute
+            step = rules.interval_minutes
         while minute <= last:
             local = datetime.combine(day, time(minute // 60, minute % 60))
-            minute += rules.interval_minutes
-            start = to_utc(local, tz)
+            minute += step
+            start, end = stay_period(rules, tz, local, hours)
             if start < requested_utc or check_stay(rules, 999, tz, local, hours, 0, now):
                 continue
-            end = start + timedelta(hours=hours)
             if any(not _overlaps(busy[r.id], start, end) for r in rooms):
-                found.append({"checkin_local": local.strftime("%Y-%m-%dT%H:%M"), "checkout_local": iso_local(end, tz),
+                found.append({"checkin_local": iso_local(start, tz), "checkout_local": iso_local(end, tz),
                               "label": f"{fmt_local(start, tz)} to {fmt_local(end, tz)}"})
                 break
         if len(found) >= limit:
@@ -336,8 +364,7 @@ async def build_quote(session: AsyncSession, unit: Unit, prop: Property, host: H
     if violation:
         return {**base, "available": False, "code": violation.code, "message": violation.message, "alternatives": []}
 
-    start = to_utc(checkin_local, tz)
-    end = start + timedelta(hours=hours)
+    start, end = stay_period(rules, tz, checkin_local, hours)
     rooms = active_rooms(unit)
     busy = await busy_by_room(session, [r.id for r in rooms], start, end)
     free = [r for r in rooms if not _overlaps(busy[r.id], start, end)]
@@ -355,7 +382,8 @@ async def build_quote(session: AsyncSession, unit: Unit, prop: Property, host: H
         return {**base, "available": False, "code": "SLOT_UNAVAILABLE", "message": message, "alternatives": alts}
 
     breakdown = await unit_price(session, unit, prop, overrides, hours)
-    return {**base, "available": True, "checkin_local": checkin_local.strftime("%Y-%m-%dT%H:%M"), "checkout_local": iso_local(end, tz),
+    return {**base, "available": True, "stay_mode": rules.stay_mode, "nights": hours // 24,
+            "checkin_local": iso_local(start, tz), "checkout_local": iso_local(end, tz),
             "checkin_label": fmt_local(start, tz), "checkout_label": fmt_local(end, tz), "currency": unit.currency,
             "rooms_free": len(free), "price": pricing.guest_view(breakdown),
             "response_minutes": overrides.get("booking.host_response_minutes") or await settings_service.get_value(session, "booking.host_response_minutes")}

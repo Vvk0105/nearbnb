@@ -23,7 +23,7 @@ export function PropertyCard({ item, carry }: { item: SearchItem; carry: string 
           </span>
         </p>
         {item.rating && <p className="mt-1.5"><RatingSummary average={item.rating.average} count={item.rating.count} /></p>}
-        <p className="mt-3 border-t border-slate-100 pt-3 text-sm"><span className="text-lg font-semibold">{money(item.min_price, item.currency)}</span> <span className="text-slate-500">/ 24 hours{item.units.length > 1 ? " · from" : ""}</span></p>
+        <p className="mt-3 border-t border-slate-100 pt-3 text-sm"><span className="text-lg font-semibold">{money(item.min_price, item.currency)}</span> <span className="text-slate-500">/ {item.units.length > 0 && item.units.every((u) => u.stay_mode === "fixed") ? "night" : "24 hours"}{item.units.length > 1 ? " · from" : ""}</span></p>
       </div>
     </Link>
   );

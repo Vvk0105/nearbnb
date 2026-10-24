@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError, mediaUrl } from "../lib/api";
-import { money } from "../lib/format";
+import { money, timeLabel } from "../lib/format";
+import { fixedTiming } from "../components/availability/AvailabilityPanel";
 import type { PublicProperty, PublicUnit } from "../lib/types";
 import { AvailabilityPanel } from "../components/availability/AvailabilityPanel";
 import { describeTiers } from "../components/CancelBooking";
@@ -20,6 +21,12 @@ function UnitCard({ unit, timezone, open, onToggle, initial }: { unit: PublicUni
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold">{unit.name}</h3>
           <p className="text-sm text-gray-500">{facts.join(" · ")}{unit.quantity > 1 ? ` · ${unit.quantity} rooms of this type` : ""}</p>
+          {(fixedTiming(unit) || (unit.checkin_from && unit.checkin_to)) && (
+            <p className="mt-1"><span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+              <Icon name="calendar" className="h-3.5 w-3.5" />
+              {fixedTiming(unit) ? `Fixed times: check in ${timeLabel(unit.fixed_checkin_time!)}, check out ${timeLabel(unit.fixed_checkout_time!)}` : `Flexible check-in ${timeLabel(unit.checkin_from)} to ${timeLabel(unit.checkin_to)}`}
+            </span></p>
+          )}
           {unit.description && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{unit.description}</p>}
           {unit.amenities.length > 0 && (
             <ul className="mt-3 flex flex-wrap gap-2">{unit.amenities.map((a) => <li key={a.id} className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs text-brand-800">{a.name}</li>)}</ul>
@@ -27,7 +34,7 @@ function UnitCard({ unit, timezone, open, onToggle, initial }: { unit: PublicUni
         </div>
         <div className="text-right">
           <p className="text-xl font-bold">{money(unit.price_per_24h, unit.currency)}</p>
-          <p className="text-xs text-gray-500">per 24 hours{unit.cleaning_fee > 0 ? ` + ${money(unit.cleaning_fee, unit.currency)} cleaning` : ""}</p>
+          <p className="text-xs text-gray-500">{fixedTiming(unit) ? "per night" : "per 24 hours"}{unit.cleaning_fee > 0 ? ` + ${money(unit.cleaning_fee, unit.currency)} cleaning` : ""}</p>
           <button type="button" onClick={onToggle} aria-expanded={open} className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             {open ? "Hide availability" : "Check availability"}
           </button>

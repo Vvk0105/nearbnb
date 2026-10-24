@@ -96,7 +96,7 @@ async def search(
     hint = None
     if checkin_local is not None and rows:
         overrides = await availability.overrides_for_hosts(session, {r[2].id for r in rows})
-        passing, by_tz = [], defaultdict(list)
+        passing, by_period = [], defaultdict(list)
         first_violation = None
         for row in rows:
             unit, prop, host = row[0], row[1], row[2]
@@ -106,15 +106,15 @@ async def search(
             if violation:
                 first_violation = first_violation or violation
                 continue
-            by_tz[prop.timezone].append(row)
+            # units that share a time zone and timing (almost all do) are checked together; a fixed unit has its own check-in and check-out
+            by_period[availability.stay_period(rules, tz, checkin_local, hours)].append(row)
         free: set[uuid.UUID] = set()
-        for tz_name, group in by_tz.items():
-            start = availability.to_utc(checkin_local, ZoneInfo(tz_name))
-            free |= await availability.units_with_free_room(session, [r[0].id for r in group], start, start + timedelta(hours=hours))
-        passing = [r for tz_rows in by_tz.values() for r in tz_rows if r[0].id in free]
+        for (start, end), group in by_period.items():
+            free |= await availability.units_with_free_room(session, [r[0].id for r in group], start, end)
+        passing = [r for period_rows in by_period.values() for r in period_rows if r[0].id in free]
         order = {id(r): i for i, r in enumerate(rows)}
         rows = sorted(passing, key=lambda r: order[id(r)])
-        if not rows and first_violation and not any(by_tz.values()):
+        if not rows and first_violation and not any(by_period.values()):
             hint = first_violation.message
 
     grouped: dict[uuid.UUID, dict] = {}
@@ -147,7 +147,7 @@ async def search(
             "cover_url": f"/api/v1/media/{cover.path}" if cover else None, "thumb_url": f"/api/v1/media/{cover.thumb_path}" if cover else None,
             "currency": units[0].currency, "min_price": min(u.price_per_24h for u in units),
             "distance_km": round(entry["distance"], 1) if entry["distance"] is not None else None, "rating": ratings.get(pid),
-            "units": [{"id": str(u.id), "name": u.name, "price_per_24h": u.price_per_24h, "capacity": u.capacity} for u in units],
+            "units": [{"id": str(u.id), "name": u.name, "price_per_24h": u.price_per_24h, "capacity": u.capacity, "stay_mode": u.stay_mode} for u in units],
         })
     if sort in ("price_asc", "price_desc"):
         items.sort(key=lambda i: i["min_price"], reverse=sort == "price_desc")

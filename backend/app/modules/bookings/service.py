@@ -287,8 +287,7 @@ async def create_request(session: AsyncSession, guest: User, unit_id: uuid.UUID,
     if violation:
         raise AppError(422, violation.code, violation.message)
 
-    start = availability.to_utc(checkin_local, tz)
-    end = start + timedelta(hours=hours)
+    start, end = availability.stay_period(rules, tz, checkin_local, hours)
     response_minutes = overrides.get("booking.host_response_minutes") or await settings_service.get_value(session, "booking.host_response_minutes")
     payment_minutes = overrides.get("booking.payment_deadline_minutes") or await settings_service.get_value(session, "booking.payment_deadline_minutes")
     expires_at = min(now + timedelta(minutes=response_minutes), start)

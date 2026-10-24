@@ -276,6 +276,34 @@ async def _validate_unit_values(session: AsyncSession, changes: dict[str, Any]) 
     return changes
 
 
+def _check_timing(unit: Unit | None, changes: dict[str, Any]) -> None:
+    """A fixed unit needs both its check-in and check-out time. (Flexible units ignore the two fixed times.)"""
+    if not ({"stay_mode", "fixed_checkin_time", "fixed_checkout_time"} & set(changes)):
+        return
+    mode = changes.get("stay_mode", unit.stay_mode if unit else "flexible")
+    if mode != "fixed":
+        return
+    cin = changes.get("fixed_checkin_time", unit.fixed_checkin_time if unit else None)
+    cout = changes.get("fixed_checkout_time", unit.fixed_checkout_time if unit else None)
+    if cin is None or cout is None:
+        raise AppError(422, "FIXED_TIMES_REQUIRED", "Fixed timing needs both a check-in time and a check-out time.")
+
+
+async def _check_mode_change(session: AsyncSession, unit: Unit, changes: dict[str, Any]) -> None:
+    """Switching between flexible and fixed, or moving the fixed times, would not fit guests who already have a stay, so it waits until none are coming."""
+    touched = [k for k in ("stay_mode", "fixed_checkin_time", "fixed_checkout_time") if k in changes]
+    if not touched or unit.id is None:
+        return
+    new_mode = changes.get("stay_mode", unit.stay_mode)
+    if new_mode == unit.stay_mode == "flexible":
+        return  # the fixed times are not in use, so storing them changes nothing for guests
+    upcoming = (await session.execute(
+        select(func.count()).select_from(RoomOccupancy).join(Room, Room.id == RoomOccupancy.room_id)
+        .where(Room.unit_id == unit.id, RoomOccupancy.kind.in_(("booking", "hold")), func.upper(RoomOccupancy.period) > datetime.now(UTC)))).scalar_one()
+    if upcoming:
+        raise AppError(409, "HAS_UPCOMING_BOOKINGS", "This unit has upcoming bookings or held requests, so its timing can't be changed yet. Try again once they are finished.")
+
+
 def _check_window(unit: Unit, changes: dict[str, Any]) -> None:
     start = changes.get("checkin_from", unit.checkin_from)
     end = changes.get("checkin_to", unit.checkin_to)
@@ -318,7 +346,7 @@ async def _apply_unit_values(session: AsyncSession, unit: Unit, changes: dict[st
         parsed = [uuid.UUID(str(i)) for i in ids]
         amenities = list((await session.execute(select(Amenity).where(Amenity.id.in_(parsed)))).scalars())
     quantity = changes.pop("quantity", None)
-    for key in ("checkin_from", "checkin_to"):
+    for key in ("checkin_from", "checkin_to", "fixed_checkin_time", "fixed_checkout_time"):
         if isinstance(changes.get(key), str):
             changes[key] = time.fromisoformat(changes[key])
     for key, value in changes.items():
@@ -341,6 +369,7 @@ async def create_unit(session: AsyncSession, host: HostProfile, prop: Property, 
         raise AppError(422, "NAME_REQUIRED", "Give the unit a name.")
     if "checkin_from" in changes or "checkin_to" in changes:
         _check_window(Unit(checkin_from=time(8, 0), checkin_to=time(22, 0)), changes)
+    _check_timing(None, changes)
     unit = Unit(property_id=prop.id, rooms=[], amenities=[])
     quantity = changes.get("quantity", 1)
     unit.quantity = 1
@@ -361,6 +390,7 @@ async def duplicate_unit(session: AsyncSession, host: HostProfile, unit: Unit, p
         "cleaning_fee": unit.cleaning_fee, "capacity": unit.capacity, "quantity": unit.quantity, "bedrooms": unit.bedrooms,
         "bathrooms": unit.bathrooms, "beds": unit.beds, "max_stay_hours": unit.max_stay_hours,
         "checkin_from": unit.checkin_from, "checkin_to": unit.checkin_to, "amenity_ids": [a.id for a in unit.amenities],
+        "stay_mode": unit.stay_mode, "fixed_checkin_time": unit.fixed_checkin_time, "fixed_checkout_time": unit.fixed_checkout_time,
     }
     return await create_unit(session, host, prop, {k: v for k, v in changes.items() if v is not None}, actor)
 
@@ -371,6 +401,7 @@ async def edit_unit(session: AsyncSession, host: HostProfile, unit: Unit, change
     changes = await _validate_unit_values(session, changes)
     if "checkin_from" in changes or "checkin_to" in changes:
         _check_window(unit, changes)
+    _check_timing(unit, changes)
     # Only fields whose value really changed count as an edit (see edit_property).
     unchanged = set()
     for key, value in changes.items():
@@ -382,6 +413,7 @@ async def edit_unit(session: AsyncSession, host: HostProfile, unit: Unit, change
     changes = {k: v for k, v in changes.items() if k not in unchanged}
     if not changes:
         return {"applied": [], "pending_review": []}
+    await _check_mode_change(session, unit, changes)
     if mode == "direct":
         await _apply_unit_values(session, unit, changes)
         return {"applied": sorted(k for k in changes if not k.startswith("_")), "pending_review": []}
@@ -705,6 +737,9 @@ def _unit_json(unit: Unit, media: list[Media], *, host_view: bool) -> dict:
         "capacity": unit.capacity, "quantity": unit.quantity, "bedrooms": unit.bedrooms, "bathrooms": unit.bathrooms,
         "beds": unit.beds, "max_stay_hours": unit.max_stay_hours,
         "checkin_from": unit.checkin_from.strftime("%H:%M"), "checkin_to": unit.checkin_to.strftime("%H:%M"),
+        "stay_mode": unit.stay_mode,
+        "fixed_checkin_time": unit.fixed_checkin_time.strftime("%H:%M") if unit.fixed_checkin_time else None,
+        "fixed_checkout_time": unit.fixed_checkout_time.strftime("%H:%M") if unit.fixed_checkout_time else None,
         "status": unit.status, "review_note": unit.review_note if host_view else None,
         "amenities": [{"id": str(a.id), "name": a.name} for a in unit.amenities],
         "rooms": [{"id": str(r.id), "label": r.label} for r in unit.rooms if r.active],

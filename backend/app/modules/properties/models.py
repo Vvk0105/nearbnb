@@ -91,6 +91,11 @@ class Unit(UUIDPrimaryKey, TimestampMixin, Base):
     max_stay_hours: Mapped[int | None] = mapped_column(Integer)  # per-unit override of the global maximum
     checkin_from: Mapped[time] = mapped_column(Time, default=time(8, 0))
     checkin_to: Mapped[time] = mapped_column(Time, default=time(22, 0))
+    # Timing: "flexible" = guests pick any check-in hour in the window above and stay in whole 24-hour blocks.
+    # "fixed" = the host sets one check-in time and one check-out time; guests pick only the date and the number of nights.
+    stay_mode: Mapped[str] = mapped_column(String(10), default="flexible", server_default="flexible")
+    fixed_checkin_time: Mapped[time | None] = mapped_column(Time)
+    fixed_checkout_time: Mapped[time | None] = mapped_column(Time)
     status: Mapped[str] = mapped_column(String(20), default=ST_DRAFT, index=True)
     review_note: Mapped[str | None] = mapped_column(Text)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -35,6 +35,9 @@ class UnitIn(BaseModel):
     max_stay_hours: int | None = Field(default=None, ge=24, le=2160)
     checkin_from: time | None = None
     checkin_to: time | None = None
+    stay_mode: str | None = Field(default=None, pattern="^(flexible|fixed)$")
+    fixed_checkin_time: time | None = None
+    fixed_checkout_time: time | None = None
     amenity_ids: list[uuid.UUID] | None = None
 
 

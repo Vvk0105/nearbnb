@@ -8,6 +8,11 @@ import { DayTimeline } from "./DayTimeline";
 import { MonthCalendar } from "./MonthCalendar";
 import { RequestToBook } from "./RequestToBook";
 
+/** True for a unit on fixed timing (the host set its check-in and check-out times). Anything else is flexible, as before. */
+export function fixedTiming(unit: { stay_mode?: string; fixed_checkin_time?: string | null; fixed_checkout_time?: string | null }): boolean {
+  return unit.stay_mode === "fixed" && Boolean(unit.fixed_checkin_time) && Boolean(unit.fixed_checkout_time);
+}
+
 export type PanelInitial = { date?: string; time?: string; nights?: number; guests?: number };
 
 export function PriceBreakdownView({ quote }: { quote: Quote }) {
@@ -37,7 +42,8 @@ export function AvailabilityPanel({ unit, timezone, initial = {} }: { unit: Publ
   const [nights, setNights] = useState(initial.nights ?? 1);
   const [guests, setGuests] = useState(Math.min(initial.guests ?? 2, unit.capacity));
 
-  const times = timeOptions(unit.rules.interval_minutes, unit.checkin_from, unit.checkin_to);
+  const fixed = fixedTiming(unit);
+  const times = fixed ? [unit.fixed_checkin_time!] : timeOptions(unit.rules.interval_minutes, unit.checkin_from, unit.checkin_to);
   const maxNights = Math.max(1, Math.floor(unit.rules.max_stay_hours / unit.rules.step_hours));
   const effectiveTime = times.includes(time) ? time : times[0];
 
@@ -81,16 +87,22 @@ export function AvailabilityPanel({ unit, timezone, initial = {} }: { unit: Publ
             <label htmlFor={`d-${unit.id}`} className="mb-1 block text-sm font-medium text-gray-700">Check-in date</label>
             <input id={`d-${unit.id}`} type="date" min={today} value={date} onChange={(e) => e.target.value && pick(e.target.value)} className={field} />
           </div>
+          {fixed ? (
+            <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              Fixed times: <strong>check in {timeLabel(unit.fixed_checkin_time!)}</strong>, <strong>check out {timeLabel(unit.fixed_checkout_time!)}</strong>
+            </div>
+          ) : (
+            <div>
+              <label htmlFor={`t-${unit.id}`} className="mb-1 block text-sm font-medium text-gray-700">Check-in time</label>
+              <select id={`t-${unit.id}`} value={effectiveTime} onChange={(e) => setTime(e.target.value)} className={field}>
+                {times.map((t) => <option key={t} value={t}>{timeLabel(t)}</option>)}
+              </select>
+            </div>
+          )}
           <div>
-            <label htmlFor={`t-${unit.id}`} className="mb-1 block text-sm font-medium text-gray-700">Check-in time</label>
-            <select id={`t-${unit.id}`} value={effectiveTime} onChange={(e) => setTime(e.target.value)} className={field}>
-              {times.map((t) => <option key={t} value={t}>{timeLabel(t)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor={`n-${unit.id}`} className="mb-1 block text-sm font-medium text-gray-700">Stay</label>
+            <label htmlFor={`n-${unit.id}`} className="mb-1 block text-sm font-medium text-gray-700">{fixed ? "Nights" : "Stay"}</label>
             <select id={`n-${unit.id}`} value={nights} onChange={(e) => setNights(Number(e.target.value))} className={field}>
-              {Array.from({ length: maxNights }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n * 24} hours ({n} night{n > 1 ? "s" : ""})</option>)}
+              {Array.from({ length: maxNights }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{fixed ? `${n} night${n > 1 ? "s" : ""}` : `${n * 24} hours (${n} night${n > 1 ? "s" : ""})`}</option>)}
             </select>
           </div>
           <div className="col-span-2">
@@ -117,13 +129,13 @@ export function AvailabilityPanel({ unit, timezone, initial = {} }: { unit: Publ
               <p className="text-sm text-gray-700">{q.message}</p>
               {q.alternatives.length > 0 && (
                 <div>
-                  <p className="mb-2 text-sm font-medium">Other times that work for {nights * 24} hours:</p>
+                  <p className="mb-2 text-sm font-medium">{fixed ? `Other dates that work for ${nights} night${nights > 1 ? "s" : ""}:` : `Other times that work for ${nights * 24} hours:`}</p>
                   <div className="flex flex-wrap gap-2">
                     {q.alternatives.map((a) => (
                       <button key={a.checkin_local} type="button"
                         onClick={() => { pick(a.checkin_local.slice(0, 10)); setTime(a.checkin_local.slice(11, 16)); }}
                         className="rounded-full border border-brand-300 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-800 hover:bg-brand-100">
-                        {dayLabel(a.checkin_local.slice(0, 10))}, {timeLabel(a.checkin_local.slice(11, 16))}
+                        {fixed ? dayLabel(a.checkin_local.slice(0, 10)) : `${dayLabel(a.checkin_local.slice(0, 10))}, ${timeLabel(a.checkin_local.slice(11, 16))}`}
                       </button>
                     ))}
                   </div>

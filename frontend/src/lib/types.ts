@@ -79,6 +79,8 @@ export type UnitData = {
   id: string; property_id: string; name: string; description: string; price_per_24h: number; currency: string;
   cleaning_fee: number; capacity: number; quantity: number; bedrooms: number | null; bathrooms: number | null;
   beds: number | null; max_stay_hours: number | null; checkin_from: string; checkin_to: string; status: string;
+  // Timing: flexible (any hour in the window, whole 24-hour blocks) or fixed (one check-in and one check-out time, priced per night).
+  stay_mode?: "flexible" | "fixed"; fixed_checkin_time?: string | null; fixed_checkout_time?: string | null;
   review_note: string | null; amenities: { id: string; name: string }[]; rooms: Room[]; photos: Photo[];
 };
 export type PendingRevision = { id: string; entity_type: string; entity_id: string; fields: string[]; photos_changed: boolean };
@@ -101,7 +103,7 @@ export type CalendarData = {
 export type SearchItem = {
   id: string; name: string; type_name: string | null; suburb: string; state: string;
   cover_url: string | null; thumb_url: string | null; currency: string; min_price: number; distance_km: number | null;
-  units: { id: string; name: string; price_per_24h: number; capacity: number }[]; rating?: Rating | null;
+  units: { id: string; name: string; price_per_24h: number; capacity: number; stay_mode?: string }[]; rating?: Rating | null;
 };
 export type SearchResult = { total: number; page: number; page_size: number; items: SearchItem[]; hint: string | null };
 

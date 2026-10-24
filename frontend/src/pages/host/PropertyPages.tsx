@@ -394,6 +394,7 @@ export function UnitEditor() {
         capacity: String(unit.capacity), quantity: String(unit.quantity), bedrooms: unit.bedrooms?.toString() ?? "",
         bathrooms: unit.bathrooms?.toString() ?? "", beds: unit.beds?.toString() ?? "", max_stay: unit.max_stay_hours?.toString() ?? "",
         checkin_from: unit.checkin_from, checkin_to: unit.checkin_to,
+        stay_mode: unit.stay_mode ?? "flexible", fixed_checkin_time: unit.fixed_checkin_time ?? "12:00", fixed_checkout_time: unit.fixed_checkout_time ?? "11:00",
       });
       setAmenities(unit.amenities.map((a) => a.id));
     }
@@ -407,6 +408,7 @@ export function UnitEditor() {
   const locked = unit.status === "submitted" || unit.status === "archived" || property.status === "archived";
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
   const num = (v: string) => (v === "" ? undefined : Number(v));
+  const fixed = form.stay_mode === "fixed";
 
   const submitForm = (e: FormEvent) => {
     e.preventDefault();
@@ -415,6 +417,8 @@ export function UnitEditor() {
         name: form.name, description: form.description, price_per_24h: toCents(form.price), cleaning_fee: toCents(form.cleaning),
         capacity: Number(form.capacity), quantity: Number(form.quantity), bedrooms: num(form.bedrooms), bathrooms: num(form.bathrooms),
         beds: num(form.beds), max_stay_hours: num(form.max_stay), checkin_from: form.checkin_from, checkin_to: form.checkin_to, amenity_ids: amenities,
+        stay_mode: form.stay_mode,
+        ...(form.stay_mode === "fixed" ? { fixed_checkin_time: form.fixed_checkin_time, fixed_checkout_time: form.fixed_checkout_time } : {}),
       };
       for (const k of Object.keys(body)) if (body[k] === undefined) delete body[k];
       const updated = await api<PropertyData>(`/host/units/${unit.id}`, { method: "PATCH", body });
@@ -458,7 +462,7 @@ export function UnitEditor() {
           <Field id="u_name" label="Unit name" value={form.name ?? ""} onChange={set("name")} disabled={locked} required />
           <TextArea id="u_desc" label="Description" rows={3} value={form.description ?? ""} onChange={set("description")} disabled={locked} />
           <div className="grid grid-cols-2 gap-4">
-            <Field id="u_price" label="Price per 24 hours ($)" inputMode="decimal" value={form.price ?? ""} onChange={set("price")} disabled={locked} hint="One flat price. A 48-hour stay costs twice this." />
+            <Field id="u_price" label={fixed ? "Price per night ($)" : "Price per 24 hours ($)"} inputMode="decimal" value={form.price ?? ""} onChange={set("price")} disabled={locked} hint={fixed ? "One flat price per night. A 2-night stay costs twice this." : "One flat price. A 48-hour stay costs twice this."} />
             <Field id="u_cleaning" label="Cleaning fee per booking ($)" inputMode="decimal" value={form.cleaning ?? ""} onChange={set("cleaning")} disabled={locked} />
             <Field id="u_capacity" label="Guests" type="number" min={1} value={form.capacity ?? ""} onChange={set("capacity")} disabled={locked} />
             <Field id="u_quantity" label="Number of identical rooms" type="number" min={1} value={form.quantity ?? ""} onChange={set("quantity")} disabled={locked} hint="1 for a house. For a hotel room type, how many such rooms you have." />
@@ -466,9 +470,31 @@ export function UnitEditor() {
             <Field id="u_bathrooms" label="Bathrooms" type="number" min={0} value={form.bathrooms ?? ""} onChange={set("bathrooms")} disabled={locked} />
             <Field id="u_beds" label="Beds" type="number" min={0} value={form.beds ?? ""} onChange={set("beds")} disabled={locked} />
             <Field id="u_maxstay" label="Max stay (hours, optional)" type="number" min={24} step={24} value={form.max_stay ?? ""} onChange={set("max_stay")} disabled={locked} hint="Leave empty to use the platform maximum." />
-            <Field id="u_from" label="Earliest check-in time" type="time" value={form.checkin_from ?? ""} onChange={set("checkin_from")} disabled={locked} />
-            <Field id="u_to" label="Latest check-in time" type="time" value={form.checkin_to ?? ""} onChange={set("checkin_to")} disabled={locked} />
           </div>
+          <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4">
+            <legend className="px-1 text-sm font-medium text-slate-700">Check-in and check-out times</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {([["flexible", "Flexible", "Guests choose any check-in hour in the window you set, and stay in whole 24-hour blocks. Check-out is the same time of day."],
+                ["fixed", "Fixed", "You set one check-in time and one check-out time (for example in 12:00, out 11:30). Guests choose only the date and the number of nights."]] as const).map(([value, title, text]) => (
+                <label key={value} className={`flex cursor-pointer gap-3 rounded-xl border p-3 text-sm ${form.stay_mode === value ? "border-brand-500 bg-brand-50" : "border-slate-200"} ${locked ? "cursor-not-allowed opacity-60" : ""}`}>
+                  <input type="radio" name="stay_mode" value={value} checked={form.stay_mode === value} disabled={locked} onChange={() => setForm({ ...form, stay_mode: value })} className="mt-1" />
+                  <span><span className="block font-medium">{title}</span><span className="block text-xs text-slate-600">{text}</span></span>
+                </label>
+              ))}
+            </div>
+            {fixed ? (
+              <div className="grid grid-cols-2 gap-4">
+                <Field id="u_fixed_in" label="Check-in time" type="time" value={form.fixed_checkin_time ?? ""} onChange={set("fixed_checkin_time")} disabled={locked} required />
+                <Field id="u_fixed_out" label="Check-out time" type="time" value={form.fixed_checkout_time ?? ""} onChange={set("fixed_checkout_time")} disabled={locked} required />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <Field id="u_from" label="Earliest check-in time" type="time" value={form.checkin_from ?? ""} onChange={set("checkin_from")} disabled={locked} />
+                <Field id="u_to" label="Latest check-in time" type="time" value={form.checkin_to ?? ""} onChange={set("checkin_to")} disabled={locked} />
+              </div>
+            )}
+            <p className="text-xs text-slate-500">You can change this only while the unit has no upcoming bookings or held requests.</p>
+          </fieldset>
           <fieldset>
             <legend className="mb-2 text-sm font-medium text-gray-700">Amenities</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
