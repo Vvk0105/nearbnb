@@ -46,6 +46,39 @@ def _active_host_filter():
     )
 
 
+def _like(text: str) -> str:
+    """The text as a LIKE pattern that matches it literally (a typed % or _ is just a character)."""
+    return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+async def suggest(session: AsyncSession, q: str, limit: int = 5) -> dict:
+    """Search-box suggestions from the places guests can really book today: property names, and the areas those properties are in.
+
+    Uses the same rules as search: an approved property, with at least one approved unit, whose host is active."""
+    text = q.strip()
+    if len(text) < 2:
+        return {"places": [], "properties": []}
+    like = _like(text)
+    has_unit = select(Unit.id).where(Unit.property_id == Property.id, Unit.status == ST_APPROVED).exists()
+    visible = [Property.status == ST_APPROVED, has_unit, _active_host_filter()]
+
+    names = (await session.execute(
+        select(Property.id, Property.name, Property.suburb, Property.state, PropertyType.name)
+        .join(HostProfile, HostProfile.id == Property.host_id).join(PropertyType, PropertyType.id == Property.type_id, isouter=True)
+        .where(*visible, Property.name.ilike(like, escape="\\")).order_by(func.lower(Property.name), Property.id).limit(limit))).all()
+
+    areas = (await session.execute(
+        select(Property.suburb, Property.state, func.count())
+        .join(HostProfile, HostProfile.id == Property.host_id)
+        .where(*visible, Property.suburb != "", or_(Property.suburb.ilike(like, escape="\\"), Property.postcode.ilike(like, escape="\\")))
+        .group_by(Property.suburb, Property.state).order_by(func.count().desc(), Property.suburb).limit(limit))).all()
+
+    return {
+        "places": [{"text": ", ".join(p for p in (suburb, state) if p), "suburb": suburb, "state": state, "properties": int(n)} for suburb, state, n in areas],
+        "properties": [{"id": str(pid), "name": name, "suburb": suburb, "state": state, "type_name": type_name} for pid, name, suburb, state, type_name in names],
+    }
+
+
 async def search(
     session: AsyncSession, *, q: str | None, lat: float | None, lng: float | None, radius_km: float, checkin: str | None, hours: int,
     guests: int, min_price: int | None, max_price: int | None, type_ids: list[uuid.UUID], amenity_ids: list[uuid.UUID],

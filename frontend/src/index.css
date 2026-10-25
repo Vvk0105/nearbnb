@@ -27,3 +27,17 @@
   html { -webkit-font-smoothing: antialiased; }
   :focus-visible { outline: 2px solid #14b8a6; outline-offset: 2px; }
 }
+
+/* iPhones draw date and time boxes with a built-in minimum width and centred text, which pushed the check-in box out past its card.
+   Keep them inside whatever holds them, aligned and sized like the other boxes (min-height stops an empty one from collapsing). */
+input[type="date"], input[type="time"], input[type="month"] {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #fff;
+}
+input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value, input[type="month"]::-webkit-date-and-time-value {
+  text-align: left;
+}

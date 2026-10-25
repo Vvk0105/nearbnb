@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { dayLabel, timeLabel } from "../lib/format";
@@ -31,6 +31,7 @@ export function apiQueryFrom(p: URLSearchParams): string {
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const values = readSearch(params);
   const apiQuery = apiQueryFrom(params);
   const { data, error, isFetching } = useQuery({ queryKey: ["search", apiQuery], queryFn: () => api<SearchResult>(`/search?${apiQuery}`), placeholderData: keepPreviousData });
@@ -64,7 +65,7 @@ export default function SearchPage() {
 
   return (
     <div className="space-y-6">
-      <SearchBar key={params.toString().replace(/&?(page|sort)=[^&]*/g, "")} initial={values} onSearch={onSearch} compact />
+      <SearchBar key={params.toString().replace(/&?(page|sort)=[^&]*/g, "")} initial={values} onSearch={onSearch} onPickProperty={(id) => navigate(`/property/${id}${carry.toString() ? `?${carry}` : ""}`)} compact />
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <Card title="Filters">

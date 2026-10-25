@@ -55,6 +55,12 @@ async def search(
     )
 
 
+@router.get("/search/suggest", dependencies=[Depends(rate_limit("suggest", 240, 60))])
+async def suggest(q: str = Query(..., min_length=2, max_length=80), session: AsyncSession = Depends(get_session)):
+    """What to offer under the search box as someone types: matching property names and the areas those properties are in."""
+    return await service.suggest(session, q)
+
+
 @router.get("/meta/booking")
 async def booking_meta(session: AsyncSession = Depends(get_session)):
     g = await availability.load_global_rules(session)

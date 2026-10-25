@@ -33,7 +33,7 @@ export default function Home() {
         <h1 className="relative mx-auto max-w-3xl text-4xl font-extrabold tracking-tight md:text-6xl">Find a place for exactly the time you need</h1>
         <p className="relative mx-auto mt-4 max-w-2xl text-lg text-brand-50/90">Check in at any hour. Stay for 24, 48, 72 hours or more. See real availability before you ask.</p>
         <div className="relative mx-auto mt-10 max-w-5xl text-left text-ink">
-          <SearchBar initial={EMPTY_SEARCH} onSearch={(v) => navigate(`/search?${searchToParams(v)}`)} />
+          <SearchBar initial={EMPTY_SEARCH} onSearch={(v) => navigate(`/search?${searchToParams(v)}`)} onPickProperty={(id) => navigate(`/property/${id}`)} />
         </div>
       </section>
 

@@ -22,7 +22,10 @@ export function useBookingMeta() {
 }
 
 /** Place + check-in date/time + nights + guests. Hands the values to `onSearch`; the page decides what to do with them. */
-export function SearchBar({ initial, onSearch, compact = false }: { initial: SearchValues; onSearch: (v: SearchValues) => void; compact?: boolean }) {
+export function SearchBar({ initial, onSearch, onPickProperty, compact = false }: {
+  initial: SearchValues; onSearch: (v: SearchValues) => void; compact?: boolean;
+  onPickProperty?: (propertyId: string) => void;   // when given, the Where box also suggests property names and opens the one picked
+}) {
   const { data: meta } = useBookingMeta();
   const [v, setV] = useState<SearchValues>(initial);
   const times = timeOptions(meta?.interval_minutes ?? 60);
@@ -34,32 +37,33 @@ export function SearchBar({ initial, onSearch, compact = false }: { initial: Sea
     e.preventDefault();
     onSearch(v);
   };
-  const field = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
+  // min-w-0 matters on phones: a date box has a built-in minimum width, and without this the grid lets it push out past the card.
+  const field = "w-full min-w-0 max-w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
   const lab = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500";
 
   return (
     <form onSubmit={submit} className={`grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm ${compact ? "md:grid-cols-12" : "md:grid-cols-12 md:p-5"}`} role="search">
-      <div className="md:col-span-4">
+      <div className="min-w-0 md:col-span-4">
         <span className={lab}>Where</span>
-        <PlaceInput id="where" value={v.q} onChange={(text) => setV({ ...v, q: text, lat: "", lng: "" })} onSelect={place} placeholder="Suburb, city or postcode" />
+        <PlaceInput id="where" value={v.q} onChange={(text) => setV({ ...v, q: text, lat: "", lng: "" })} onSelect={place} onPickProperty={onPickProperty} placeholder="Suburb, city or postcode" />
       </div>
-      <div className="md:col-span-2">
+      <div className="min-w-0 md:col-span-2">
         <label htmlFor="sb-date" className={lab}>Check-in</label>
         <input id="sb-date" type="date" min={todayIso()} value={v.date} onChange={set("date")} className={field} />
       </div>
-      <div className="md:col-span-2">
+      <div className="min-w-0 md:col-span-2">
         <label htmlFor="sb-time" className={lab}>Time</label>
         <select id="sb-time" value={v.time} onChange={set("time")} className={field}>
           {times.map((t) => <option key={t} value={t}>{timeText(t)}</option>)}
         </select>
       </div>
-      <div className="md:col-span-1">
+      <div className="min-w-0 md:col-span-1">
         <label htmlFor="sb-nights" className={lab}>Nights</label>
         <select id="sb-nights" value={v.nights} onChange={set("nights")} className={field}>
           {Array.from({ length: maxNights }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
         </select>
       </div>
-      <div className="md:col-span-1">
+      <div className="min-w-0 md:col-span-1">
         <label htmlFor="sb-guests" className={lab}>Guests</label>
         <input id="sb-guests" type="number" min={1} max={100} value={v.guests} onChange={set("guests")} className={field} />
       </div>
