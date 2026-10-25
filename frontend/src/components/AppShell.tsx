@@ -119,13 +119,14 @@ export function AppShell({ area, groups, counts, homeTo, title, titleIsHeading =
             <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">{(user?.full_name ?? "A").slice(0, 1).toUpperCase()}</span>
             <button
               type="button"
+              aria-label="Log out"
               className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
               onClick={async () => {
                 await logout();
                 navigate("/login");
               }}
             >
-              <Icon name="logout" className="h-4 w-4" /> Log out
+              <Icon name="logout" className="h-4 w-4" /> <span className="hidden sm:inline">Log out</span>
             </button>
           </div>
         </header>

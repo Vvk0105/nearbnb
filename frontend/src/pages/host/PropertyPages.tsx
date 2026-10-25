@@ -257,7 +257,7 @@ export function PropertyEditor() {
           )}
           <Field id="address_line1" label="Street address" value={form.address_line1 ?? ""} onChange={set("address_line1")} disabled={locked} />
           <Field id="address_line2" label="Address line 2" value={form.address_line2 ?? ""} onChange={set("address_line2")} disabled={locked} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="suburb" label="Suburb / city" value={form.suburb ?? ""} onChange={set("suburb")} disabled={locked} />
             <Field id="state" label="State" value={form.state ?? ""} onChange={set("state")} disabled={locked} />
             <Field id="postcode" label="Postcode" value={form.postcode ?? ""} onChange={set("postcode")} disabled={locked} />
@@ -267,7 +267,7 @@ export function PropertyEditor() {
             <Field id="timezone" label="Timezone" list="tz-list" value={form.timezone ?? ""} onChange={set("timezone")} disabled={locked} hint="All check-in times for this property use this timezone. It is set from the state automatically; change it only if it's wrong." />
             <datalist id="tz-list">{TIMEZONES.map((t) => <option key={t} value={t} />)}</datalist>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="latitude" label="Latitude (optional)" inputMode="decimal" value={form.latitude ?? ""} onChange={set("latitude")} disabled={locked} />
             <Field id="longitude" label="Longitude (optional)" inputMode="decimal" value={form.longitude ?? ""} onChange={set("longitude")} disabled={locked} />
           </div>
@@ -465,7 +465,7 @@ export function UnitEditor() {
         <form onSubmit={submitForm} className="space-y-4">
           <Field id="u_name" label="Unit name" value={form.name ?? ""} onChange={set("name")} disabled={locked} required />
           <TextArea id="u_desc" label="Description" rows={3} value={form.description ?? ""} onChange={set("description")} disabled={locked} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="u_price" label={fixed ? "Price per night ($)" : "Price per 24 hours ($)"} inputMode="decimal" value={form.price ?? ""} onChange={set("price")} disabled={locked} hint={fixed ? "One flat price per night. A 2-night stay costs twice this." : "One flat price. A 48-hour stay costs twice this."} />
             <Field id="u_cleaning" label="Cleaning fee per booking ($)" inputMode="decimal" value={form.cleaning ?? ""} onChange={set("cleaning")} disabled={locked} />
             <Field id="u_capacity" label="Guests" type="number" min={1} value={form.capacity ?? ""} onChange={set("capacity")} disabled={locked} />

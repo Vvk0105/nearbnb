@@ -189,7 +189,7 @@ export function ApplyPage() {
           )}
           <Field id="phone" label="Phone" value={form.phone ?? ""} onChange={set("phone")} placeholder="+61 400 000 000" disabled={!editable} />
           <Field id="address_line1" label="Street address" value={form.address_line1 ?? ""} onChange={set("address_line1")} disabled={!editable} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="suburb" label="Suburb / city" value={form.suburb ?? ""} onChange={set("suburb")} disabled={!editable} />
             <Field id="state" label="State" value={form.state ?? ""} onChange={set("state")} disabled={!editable} />
             <Field id="postcode" label="Postcode" value={form.postcode ?? ""} onChange={set("postcode")} disabled={!editable} />

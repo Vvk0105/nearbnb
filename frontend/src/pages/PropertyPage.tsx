@@ -17,32 +17,33 @@ function UnitCard({ unit, timezone, open, onToggle, initial }: { unit: PublicUni
     unit.bathrooms != null && `${unit.bathrooms} bathroom${unit.bathrooms === 1 ? "" : "s"}`, unit.beds != null && `${unit.beds} bed${unit.beds === 1 ? "" : "s"}`].filter(Boolean);
   return (
     <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      {/* On a phone everything stacks in one readable column (name, price, details, button); from a tablet up the price sits at the right of the name. */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold">{unit.name}</h3>
           <p className="text-sm text-gray-500">{facts.join(" · ")}{unit.quantity > 1 ? ` · ${unit.quantity} rooms of this type` : ""}</p>
-          {(fixedTiming(unit) || (unit.checkin_from && unit.checkin_to)) && (
-            <p className="mt-1"><span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-              <Icon name="calendar" className="h-3.5 w-3.5" />
-              {fixedTiming(unit) ? `Fixed times: check in ${timeLabel(unit.fixed_checkin_time!)}, check out ${timeLabel(unit.fixed_checkout_time!)}` : `Flexible check-in ${timeLabel(unit.checkin_from)} to ${timeLabel(unit.checkin_to)}`}
-            </span></p>
-          )}
-          {unit.description && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{unit.description}</p>}
-          {unit.amenities.length > 0 && (
-            <ul className="mt-3 flex flex-wrap gap-2">{unit.amenities.map((a) => <li key={a.id} className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs text-brand-800">{a.name}</li>)}</ul>
-          )}
         </div>
-        <div className="text-right">
+        <div className="sm:shrink-0 sm:text-right">
           <p className="text-xl font-bold">{money(unit.price_per_24h, unit.currency)}</p>
           <p className="text-xs text-gray-500">{fixedTiming(unit) ? "per night" : "per 24 hours"}{unit.cleaning_fee > 0 ? ` + ${money(unit.cleaning_fee, unit.currency)} cleaning` : ""}</p>
-          <button type="button" onClick={onToggle} aria-expanded={open} className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            {open ? "Hide availability" : "Check availability"}
-          </button>
         </div>
       </div>
+      {(fixedTiming(unit) || (unit.checkin_from && unit.checkin_to)) && (
+        <p className="mt-3"><span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+          <Icon name="calendar" className="h-3.5 w-3.5 shrink-0" />
+          {fixedTiming(unit) ? `Fixed times: check in ${timeLabel(unit.fixed_checkin_time!)}, check out ${timeLabel(unit.fixed_checkout_time!)}` : `Flexible check-in ${timeLabel(unit.checkin_from)} to ${timeLabel(unit.checkin_to)}`}
+        </span></p>
+      )}
+      {unit.description && <p className="mt-3 whitespace-pre-wrap text-sm text-gray-700">{unit.description}</p>}
+      {unit.amenities.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2">{unit.amenities.map((a) => <li key={a.id} className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs text-brand-800">{a.name}</li>)}</ul>
+      )}
       {unit.photos.length > 0 && (
         <div className="mt-4 flex gap-2 overflow-x-auto">{unit.photos.map((p) => <img key={p.id} src={mediaUrl(p.thumb_url)} alt="" className="h-24 w-36 shrink-0 rounded-lg object-cover" />)}</div>
       )}
+      <button type="button" onClick={onToggle} aria-expanded={open} className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto">
+        {open ? "Hide availability" : "Check availability"}
+      </button>
       {open && <div className="mt-6 border-t border-gray-100 pt-6"><AvailabilityPanel unit={unit} timezone={timezone} initial={initial} /></div>}
     </Card>
   );
