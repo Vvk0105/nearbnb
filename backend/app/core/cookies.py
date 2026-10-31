@@ -1,4 +1,4 @@
-from fastapi import Response
+from fastapi import Request, Response
 
 from app.core.config import get_settings
 
@@ -6,6 +6,35 @@ ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
 CSRF_COOKIE = "csrf_token"
 REFRESH_PATH = "/api/v1/auth"
+# The mobile app has no cookie jar we trust: it says so with this header, gets its tokens in the response body and
+# sends them back as "Authorization: Bearer <access>" and "X-Refresh-Token: <refresh>". The website is unchanged.
+MOBILE_HEADER = "x-client"
+
+
+def is_mobile(request: Request) -> bool:
+    return request.headers.get(MOBILE_HEADER, "").lower() == "mobile"
+
+
+def access_token_from(request: Request) -> str | None:
+    """The cookie (website) or the bearer token (mobile app)."""
+    if token := request.cookies.get(ACCESS_COOKIE):
+        return token
+    scheme, _, value = request.headers.get("authorization", "").partition(" ")
+    return value.strip() or None if scheme.lower() == "bearer" else None
+
+
+def refresh_token_from(request: Request) -> str | None:
+    return request.cookies.get(REFRESH_COOKIE) or request.headers.get("x-refresh-token") or None
+
+
+def deliver_session(request: Request, response: Response, access: str, refresh: str, csrf: str) -> dict | None:
+    """Website: sets the cookies and returns None. Mobile app: returns the tokens for the response body instead.
+    No CSRF token for the app: CSRF rides on cookies the browser sends by itself, and the app sends none."""
+    if is_mobile(request):
+        return {"access_token": access, "refresh_token": refresh, "token_type": "bearer",
+                "expires_in": get_settings().access_token_minutes * 60}
+    set_session_cookies(response, access, refresh, csrf)
+    return None
 
 
 def _common() -> dict:

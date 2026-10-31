@@ -91,6 +91,7 @@ export function PublicFrame({ children }: { children: ReactNode }) {
               <li><Link to="/host" className="hover:text-brand-700 hover:underline">Become a host</Link></li>
               <li><Link to="/legal/terms" className="hover:text-brand-700 hover:underline">Terms</Link></li>
               <li><Link to="/legal/privacy" className="hover:text-brand-700 hover:underline">Privacy</Link></li>
+              <li><Link to="/delete-account" className="hover:text-brand-700 hover:underline">Delete your account</Link></li>
             </ul>
           </div>
         </div>

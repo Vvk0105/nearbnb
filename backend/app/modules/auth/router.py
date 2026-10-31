@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.cookies import REFRESH_COOKIE, clear_session_cookies, set_session_cookies
+from app.core.cookies import clear_session_cookies, deliver_session, is_mobile, refresh_token_from
 from app.core.db import get_session
 from app.core.deps import get_current_user, require_admin
 from app.core.errors import AppError
@@ -83,7 +83,7 @@ GENERIC_SENT = {"message": "If the details are valid, a code has been sent to yo
 @router.post("/register", status_code=202, dependencies=[Depends(rate_limit("register", 5, 3600))])
 async def register(body: RegisterIn, request: Request, session: AsyncSession = Depends(get_session)):
     ip = client_ip(request)
-    await verify_turnstile(body.turnstile_token, ip)
+    await verify_turnstile(body.turnstile_token, ip, mobile=is_mobile(request))
     if not body.accept_terms:
         raise AppError(422, "TERMS_REQUIRED", "You must accept the Terms and Privacy Policy")
     email = service.normalize_email(body.email)
@@ -122,13 +122,14 @@ async def verify_email(body: VerifyIn, request: Request, response: Response, ses
     user.status = USER_ACTIVE
     tokens = await service.start_session(session, user, request)
     await session.commit()
-    set_session_cookies(response, tokens.access, tokens.refresh, tokens.csrf)
-    return await serialize_user(session, user)
+    issued = deliver_session(request, response, tokens.access, tokens.refresh, tokens.csrf)
+    user_out = await serialize_user(session, user)
+    return {**user_out, "tokens": issued} if issued else user_out
 
 
 @router.post("/resend-otp", status_code=202, dependencies=[Depends(rate_limit("resend", 10, 3600))])
 async def resend_otp(body: EmailIn, request: Request, session: AsyncSession = Depends(get_session)):
-    await verify_turnstile(body.turnstile_token, client_ip(request))
+    await verify_turnstile(body.turnstile_token, client_ip(request), mobile=is_mobile(request))
     email = service.normalize_email(body.email)
     await cooldown(f"otp:{email}", get_settings().otp_resend_cooldown_seconds)
     user = await service.get_user_by_email(session, email)
@@ -144,7 +145,7 @@ async def resend_otp(body: EmailIn, request: Request, session: AsyncSession = De
 async def login(body: LoginIn, request: Request, response: Response, session: AsyncSession = Depends(get_session)):
     settings = get_settings()
     ip = client_ip(request)
-    await verify_turnstile(body.turnstile_token, ip)
+    await verify_turnstile(body.turnstile_token, ip, mobile=is_mobile(request))
     now = datetime.now(UTC)
     user = await service.get_user_by_email(session, body.email)
 
@@ -184,24 +185,25 @@ async def login(body: LoginIn, request: Request, response: Response, session: As
     if user.is_admin:
         audit.record(session, action="admin.login", entity_type="user", entity_id=user.id, actor_id=user.id, ip=ip)
     await session.commit()
-    set_session_cookies(response, tokens.access, tokens.refresh, tokens.csrf)
-    return await serialize_user(session, user)
+    issued = deliver_session(request, response, tokens.access, tokens.refresh, tokens.csrf)
+    user_out = await serialize_user(session, user)
+    return {**user_out, "tokens": issued} if issued else user_out
 
 
 @router.post("/refresh")
 async def refresh(request: Request, response: Response, session: AsyncSession = Depends(get_session)):
-    token = request.cookies.get(REFRESH_COOKIE)
+    token = refresh_token_from(request)
     if not token:
         raise AppError(401, "NOT_AUTHENTICATED", "Session expired")
     user, tokens = await service.rotate_refresh(session, token, request)
     await session.commit()
-    set_session_cookies(response, tokens.access, tokens.refresh, tokens.csrf)
-    return {"ok": True}
+    issued = deliver_session(request, response, tokens.access, tokens.refresh, tokens.csrf)
+    return {"ok": True, "tokens": issued} if issued else {"ok": True}
 
 
 @router.post("/logout")
 async def logout(request: Request, response: Response, session: AsyncSession = Depends(get_session)):
-    token = request.cookies.get(REFRESH_COOKIE)
+    token = refresh_token_from(request)
     if token:
         await session.execute(
             update(RefreshToken)
@@ -215,7 +217,7 @@ async def logout(request: Request, response: Response, session: AsyncSession = D
 
 @router.post("/forgot-password", status_code=202, dependencies=[Depends(rate_limit("forgot", 5, 3600))])
 async def forgot_password(body: EmailIn, request: Request, session: AsyncSession = Depends(get_session)):
-    await verify_turnstile(body.turnstile_token, client_ip(request))
+    await verify_turnstile(body.turnstile_token, client_ip(request), mobile=is_mobile(request))
     email = service.normalize_email(body.email)
     await cooldown(f"reset:{email}", get_settings().otp_resend_cooldown_seconds)
     user = await service.get_user_by_email(session, email)
@@ -254,7 +256,7 @@ async def change_password(
         raise AppError(400, "INVALID_CREDENTIALS", "Current password is incorrect")
     _check_password_strength(body.new_password, user.email)
     user.password_hash = hash_password(body.new_password)
-    current = request.cookies.get(REFRESH_COOKIE)
+    current = refresh_token_from(request)
     await service.revoke_all_sessions(session, user.id, except_hash=hash_token(current) if current else None)
     audit.record(session, action="user.password_changed", entity_type="user", entity_id=user.id, actor_id=user.id, ip=client_ip(request))
     enqueue_email(session, to_email=user.email, template="password_changed", context={"name": user.full_name}, user_id=user.id)
@@ -265,7 +267,7 @@ async def change_password(
 
 @router.get("/sessions")
 async def list_sessions(request: Request, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
-    current = request.cookies.get(REFRESH_COOKIE)
+    current = refresh_token_from(request)
     current_hash = hash_token(current) if current else None
     rows = (
         await session.execute(

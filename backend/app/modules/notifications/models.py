@@ -39,6 +39,7 @@ class Notification(UUIDPrimaryKey, Base):
     __table_args__ = (
         Index("ix_notifications_user_created", "user_id", text("created_at DESC")),
         Index("ix_notifications_unread", "user_id", postgresql_where=text("read_at IS NULL")),
+        Index("ix_notifications_unpushed", "created_at", postgresql_where=text("pushed_at IS NULL")),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
@@ -49,3 +50,16 @@ class Notification(UUIDPrimaryKey, Base):
     tone: Mapped[str] = mapped_column(String(10), default="news")  # news | action | problem
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # handled by the push sender (sent, or nobody to send to)
+
+
+class DeviceToken(UUIDPrimaryKey, Base):
+    """A phone that has the app and allowed notifications. Firebase gives each install a token; one person can have several phones."""
+
+    __tablename__ = "device_tokens"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token: Mapped[str] = mapped_column(String(512), unique=True)
+    platform: Mapped[str] = mapped_column(String(10))  # android | ios
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

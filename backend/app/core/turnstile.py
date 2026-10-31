@@ -9,10 +9,10 @@ log = logging.getLogger(__name__)
 VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
 
-async def verify_turnstile(token: str | None, ip: str | None) -> None:
-    """No-op when TURNSTILE_SECRET_KEY is empty (development)."""
+async def verify_turnstile(token: str | None, ip: str | None, *, mobile: bool = False) -> None:
+    """No-op when TURNSTILE_SECRET_KEY is empty (development), and for the mobile app, which relies on rate limits."""
     secret = get_settings().turnstile_secret_key
-    if not secret:
+    if not secret or mobile:
         return
     if not token:
         raise AppError(400, "CAPTCHA_REQUIRED", "Please complete the CAPTCHA.")

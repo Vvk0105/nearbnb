@@ -11,6 +11,7 @@ redis==5.2.1
 httpx==0.28.1
 argon2-cffi==23.1.0
 PyJWT==2.15.0
+cryptography==45.0.7  # RS256 signing for the Firebase push key
 pyotp==2.9.0
 python-multipart==0.0.31
 Pillow==12.3.0

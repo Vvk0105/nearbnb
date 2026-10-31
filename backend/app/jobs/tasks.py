@@ -7,6 +7,7 @@ from app.core.db import task_session
 from app.jobs.celery_app import celery_app
 from app.modules.auth.models import OtpCode, RefreshToken
 from app.modules.bookings import service as booking_service
+from app.modules.notifications.push import process_pushes
 from app.modules.notifications.service import kick_outbox, process_outbox
 from app.modules.ical import service as ical_service
 from app.modules.payments import refunds as refund_service
@@ -17,7 +18,10 @@ from app.modules.reviews import service as review_service
 
 async def _send_pending() -> int:
     async with task_session() as session:
-        return await process_outbox(session)
+        sent = await process_outbox(session)
+    async with task_session() as session:  # the same moments go to the mobile app as pushes
+        await process_pushes(session)
+    return sent
 
 
 @celery_app.task(name="emails.send_pending")

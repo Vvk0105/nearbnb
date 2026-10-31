@@ -16,3 +16,4 @@ celerybeat-schedule*
 
 # database backups contain personal data
 backups/
+nearbnb-app

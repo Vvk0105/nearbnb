@@ -42,6 +42,15 @@ TEMPLATES: dict[str, tuple[str, str, str]] = {
         "Hi {{ name }},\n\nYour account has been deactivated as requested.\n",
         "<p>Hi {{ name }},</p><p>Your account has been deactivated as requested.</p>",
     ),
+    "account_deleted": (
+        "Your NearBnB account was deleted",
+        "Hi {{ name }},\n\nYour NearBnB account has been deleted as requested. Your personal details have been removed. "
+        "Records of past bookings and payments are kept without your contact details, as the law requires.\n\n"
+        "If you did not ask for this, contact support straight away.\n",
+        "<p>Hi {{ name }},</p><p>Your NearBnB account has been deleted as requested. Your personal details have been removed. "
+        "Records of past bookings and payments are kept without your contact details, as the law requires.</p>"
+        "<p>If you did not ask for this, contact support straight away.</p>",
+    ),
 }
 
 

@@ -306,36 +306,42 @@ function TwoFactorCard({ user }: { user: User }) {
   );
 }
 
-function DeactivateCard() {
+function DeleteAccountCard() {
   const { setUser } = useAuth();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [open, setOpen] = useState(false);
   const { run, busy, banner } = useAction();
   return (
-    <Card title="Deactivate account">
+    <Card title="Delete account">
       {!open ? (
-        <Button variant="secondary" onClick={() => setOpen(true)}>
-          Deactivate my account
-        </Button>
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">Permanently delete your account and your personal details.</p>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Delete my account
+          </Button>
+        </div>
       ) : (
         <form
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
-              await api("/me/deactivate", { method: "POST", body: { password } });
+              await api("/me/delete", { method: "POST", body: { password } });
               setUser(null);
               navigate("/");
             });
           }}
         >
           {banner}
-          <Alert kind="info">Your account will be deactivated and you will be signed out everywhere. Booking history is kept.</Alert>
-          <Field id="deact" label="Confirm with your password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Alert kind="info">
+            This cannot be undone. Your name, email, phone, date of birth, photo and social links are erased, and you are signed out everywhere.
+            Past bookings and payments are kept without your details, as the law requires. Bookings in progress must be finished or cancelled first.
+          </Alert>
+          <Field id="delete-password" label="Confirm with your password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           <div className="flex gap-2">
             <Button type="submit" variant="danger" loading={busy}>
-              Deactivate
+              Delete my account
             </Button>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
@@ -371,7 +377,7 @@ export function SecurityPage() {
       <EmailCard user={user} />
       <SessionsCard />
       {user.is_admin && <TwoFactorCard user={user} />}
-      {!user.is_admin && <DeactivateCard />}
+      {!user.is_admin && <DeleteAccountCard />}
     </div>
   );
 }

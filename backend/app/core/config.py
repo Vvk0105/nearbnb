@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     email_kick_enabled: bool = True
 
     google_places_api_key: str = ""
+    # Push notifications to the mobile app: the Firebase service-account JSON file, base64-encoded on one line
+    # (`base64 -w0 key.json`). Empty = no pushes; the in-app list and emails work as before.
+    firebase_service_account_b64: str = ""
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_publishable_key: str = ""  # safe to show in the browser (pk_test_... / pk_live_...)

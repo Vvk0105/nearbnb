@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import PropertyPage from "./pages/PropertyPage";
 import SearchPage from "./pages/Search";
 import LegalPage from "./pages/Legal";
+import DeleteAccountInfoPage from "./pages/DeleteAccountInfo";
 import AccountPage, { SecurityPage } from "./pages/account/Account";
 import { AccountLayout } from "./components/AccountLayout";
 import { TripDetailPage, TripsPage } from "./pages/account/Trips";
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="property/:propertyId" element={<PropertyPage />} />
         <Route path="legal/:docType" element={<LegalPage />} />
+        <Route path="delete-account" element={<DeleteAccountInfoPage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="account" element={<AccountLayout />}>

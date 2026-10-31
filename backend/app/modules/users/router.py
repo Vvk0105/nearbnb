@@ -143,6 +143,21 @@ async def confirm_email_change(body: CodeIn, request: Request, user: User = Depe
     return await service.serialize_user(session, user)
 
 
+@router.post("/delete", dependencies=[Depends(rate_limit("delete_account", 5, 3600))])
+async def delete_account(body: PasswordIn, request: Request, response: Response, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
+    if not verify_password(user.password_hash, body.password):
+        raise AppError(400, "INVALID_CREDENTIALS", "Password is incorrect")
+    email, name = user.email, user.full_name
+    await service.delete_account(session, user)        # checks first, so nothing below runs when the account cannot be deleted
+    await auth_service.revoke_all_sessions(session, user.id)
+    enqueue_email(session, to_email=email, template="account_deleted", context={"name": name}, user_id=user.id)
+    audit.record(session, action="user.deleted", entity_type="user", entity_id=user.id, actor_id=user.id, ip=client_ip(request))
+    await session.commit()
+    kick_outbox()
+    clear_session_cookies(response)
+    return {"ok": True}
+
+
 @router.post("/deactivate")
 async def deactivate(body: PasswordIn, request: Request, response: Response, user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     if user.is_admin:

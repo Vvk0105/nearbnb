@@ -108,3 +108,50 @@ def save_avatar(user: User, data: bytes) -> None:
     path = f"public/avatars/{user.id}.webp"
     get_storage().save(path, process_avatar(data))
     user.photo_path = path
+
+
+# Bookings still running block a deletion: the host and the money still need the guest.
+OPEN_BOOKING_STATUSES = ("requested", "accepted", "payment_pending", "confirmed", "checked_in")
+DELETED_NAME = "Deleted user"
+
+
+async def delete_account(session: AsyncSession, user: User) -> None:
+    """Erases a person's details and closes the account for good (Google Play and privacy law ask for this).
+
+    Bookings, payments and reviews stay, because accounting and the other side's history need them, but they no longer
+    say who the person was: the copy of the guest's details on each booking is cleared too. The caller checks the password
+    and sends the goodbye email first (it needs the real address)."""
+    from sqlalchemy import delete, select, update
+
+    from app.core.security import generate_token, hash_password
+    from app.modules.bookings.models import Booking
+    from app.modules.hosts.models import HostProfile
+    from app.modules.notifications.models import DeviceToken, Notification
+    from app.modules.users.models import USER_DEACTIVATED, UserSocialLink
+
+    if user.is_admin:
+        raise AppError(403, "FORBIDDEN", "Administrator accounts cannot be deleted this way.")
+    if await session.scalar(select(HostProfile.id).where(HostProfile.user_id == user.id)):
+        raise AppError(409, "HOST_ACCOUNT", "This account is also a host account. Contact support to close it.")
+    if await session.scalar(select(Booking.id).where(Booking.guest_id == user.id, Booking.status.in_(OPEN_BOOKING_STATUSES)).limit(1)):
+        raise AppError(409, "OPEN_BOOKINGS", "You have bookings in progress. Cancel them, or wait until your stays are over, then try again.")
+
+    if user.photo_path:
+        try:
+            get_storage().delete(user.photo_path)
+        except Exception:  # noqa: BLE001  a missing file must not stop the deletion
+            pass
+    await session.execute(update(Booking).where(Booking.guest_id == user.id).values(guest_snapshot={"full_name": DELETED_NAME, "deleted": True}))
+    await session.execute(delete(Notification).where(Notification.user_id == user.id))
+    await session.execute(delete(DeviceToken).where(DeviceToken.user_id == user.id))
+    await session.execute(delete(UserSocialLink).where(UserSocialLink.user_id == user.id))
+    user.email = f"deleted-{user.id.hex}@deleted.invalid"   # frees the real address: the person may sign up again one day
+    user.pending_email = None
+    user.full_name = DELETED_NAME
+    user.phone = None
+    user.dob = None
+    user.photo_path = None
+    user.password_hash = hash_password(generate_token())
+    user.totp_secret = None
+    user.totp_enabled = False
+    user.status = USER_DEACTIVATED
