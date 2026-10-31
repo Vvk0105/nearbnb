@@ -67,10 +67,37 @@ async def test_autocomplete_returns_clean_suggestions_and_limits_to_supported_co
     assert sent.headers["x-goog-api-key"] == "test-key-123"
 
 
-async def test_address_mode_asks_google_for_street_addresses(new_client, google):
+async def test_address_mode_does_not_filter_by_kind_so_businesses_and_highways_are_found(new_client, google):
+    """A host whose resort is on Google Maps must find it by name; a type filter of street addresses hid it."""
     anon = await new_client()
-    await anon.get(f"{API}/places/autocomplete", params={"q": "1 campbell", "kind": "address"})
-    assert "street_address" in json.loads(google[0].content)["includedPrimaryTypes"]
+    await anon.get(f"{API}/places/autocomplete", params={"q": "erldunda desert", "kind": "address"})
+    body = json.loads(google[0].content)
+    assert "includedPrimaryTypes" not in body
+    assert body["includedRegionCodes"] == ["au"]  # still only the countries we support
+
+
+def test_a_business_on_a_highway_junction_gets_its_road_as_line_1():
+    place = places.parse_place({
+        "id": "ChIJ_erldunda", "displayName": {"text": "Erldunda Desert Oaks Resort"},
+        "formattedAddress": "Stuart Hwy & Lasseter Hwy, Ghan NT 0872, Australia",
+        "location": {"latitude": -25.2, "longitude": 133.2},
+        "addressComponents": [
+            {"longText": "Ghan", "shortText": "Ghan", "types": ["locality", "political"]},
+            {"longText": "Northern Territory", "shortText": "NT", "types": ["administrative_area_level_1", "political"]},
+            {"longText": "0872", "shortText": "0872", "types": ["postal_code"]},
+            {"longText": "Australia", "shortText": "AU", "types": ["country", "political"]},
+        ],
+    })
+    assert place["address"] == {"address_line1": "Stuart Hwy & Lasseter Hwy", "suburb": "Ghan", "state": "NT", "postcode": "0872", "country": "AU"}
+    assert place["latitude"] == -25.2
+
+
+def test_picking_a_town_leaves_line_1_empty_for_the_host_to_fill():
+    place = places.parse_place({
+        "id": "ChIJ_ghan", "formattedAddress": "Ghan NT 0872, Australia",
+        "addressComponents": [{"longText": "Ghan", "shortText": "Ghan", "types": ["locality"]}],
+    })
+    assert place["address"]["address_line1"] == ""
 
 
 async def test_place_details_become_our_address_fields(new_client, google):

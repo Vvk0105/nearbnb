@@ -76,7 +76,7 @@ describe("suggestions under the Where box", () => {
     const u = userEvent.setup();
     render(<Harness onPickProperty={() => undefined} />);
     await u.type(box(), "bon");
-    await u.click(await screen.findByRole("option", { name: /Bondi, NSW/ }));
+    await u.click(await screen.findByRole("option", { name: /^Bondi, NSW/ }));
     expect(box().value).toBe("Bondi, NSW");
     const before = suggestCalls().length;
     await new Promise((r) => setTimeout(r, 400));
@@ -141,7 +141,7 @@ describe("suggestions under the Where box", () => {
     render(<Harness onPickProperty={() => undefined} onSelect={onSelect} />);
     await u.type(box(), "man");
     await screen.findByRole("option", { name: /Manly/ });
-    expect(screen.getByRole("option", { name: /Bondi, NSW/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /^Bondi, NSW/ })).toBeTruthy();
     await u.click(screen.getByRole("option", { name: /Manly/ }));
     await waitFor(() => expect(onSelect).toHaveBeenCalledTimes(1));
     expect(onSelect.mock.calls[0][0]).toMatchObject({ latitude: -33.79, longitude: 151.28 });
@@ -158,7 +158,7 @@ describe("the search bar on the home page", () => {
         <MemoryRouter initialEntries={["/"]}><AuthProvider><App /></AuthProvider></MemoryRouter>
       </QueryClientProvider>,
     );
-    await u.type(await screen.findByRole("combobox"), "bea");
+    await u.type(await screen.findByPlaceholderText("Suburb, city or postcode"), "bea");
     await u.click(await screen.findByRole("option", { name: /Beach House/ }));
     await waitFor(() => expect(calls.some((c) => c.endsWith("/properties/p1"))).toBe(true));   // we are on that property's page (the test server has none)
   });

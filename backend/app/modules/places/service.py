@@ -12,9 +12,9 @@ from app.core.errors import AppError
 
 log = logging.getLogger(__name__)
 BASE = "https://places.googleapis.com/v1"
-# Search by area (suburbs, cities, postcodes) vs pick an exact street address (hosts adding a property).
+# Guests search by area (suburbs, cities, postcodes). Hosts adding a property get no type filter: their place may be a
+# business on Google Maps (a resort, a motel), a rural road or a highway junction, none of which is a "street_address".
 REGION_TYPES = ["locality", "sublocality", "postal_code", "administrative_area_level_1"]
-ADDRESS_TYPES = ["street_address", "premise", "subpremise"]
 
 
 def get_http_client() -> httpx.AsyncClient:
@@ -40,11 +40,9 @@ def _unavailable(exc: Exception) -> AppError:
 async def autocomplete(query: str, *, kind: str, session_token: str | None, countries: list[str]) -> list[dict[str, str]]:
     if not enabled():
         return []
-    body: dict[str, Any] = {
-        "input": query,
-        "includedRegionCodes": [c.lower() for c in countries][:15],
-        "includedPrimaryTypes": ADDRESS_TYPES if kind == "address" else REGION_TYPES,
-    }
+    body: dict[str, Any] = {"input": query, "includedRegionCodes": [c.lower() for c in countries][:15]}
+    if kind != "address":
+        body["includedPrimaryTypes"] = REGION_TYPES
     if session_token:
         body["sessionToken"] = session_token  # groups keystrokes + the final pick into one billed session
     try:
@@ -77,15 +75,20 @@ def parse_place(data: dict[str, Any]) -> dict[str, Any]:
     short = lambda t: comps.get(t, {}).get("shortText", "")  # noqa: E731
     long = lambda t: comps.get(t, {}).get("longText", "")    # noqa: E731
     street = " ".join(x for x in (long("street_number"), long("route")) if x)
+    formatted = data.get("formattedAddress", "")
+    suburb = long("locality") or long("sublocality") or long("postal_town")
+    first = formatted.split(",")[0].strip()
+    if not street and first and suburb and not first.startswith(suburb):
+        street = first  # e.g. a roadhouse at "Stuart Hwy & Lasseter Hwy, Ghan NT 0872": no street number, but a real line 1
     loc = data.get("location", {})
     return {
         "place_id": data.get("id"),
-        "label": data.get("formattedAddress") or data.get("displayName", {}).get("text", ""),
+        "label": formatted or data.get("displayName", {}).get("text", ""),
         "latitude": loc.get("latitude"),
         "longitude": loc.get("longitude"),
         "address": {
             "address_line1": street,
-            "suburb": long("locality") or long("sublocality") or long("postal_town"),
+            "suburb": suburb,
             "state": short("administrative_area_level_1"),
             "postcode": long("postal_code"),
             "country": short("country"),
