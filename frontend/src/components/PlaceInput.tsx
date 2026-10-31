@@ -41,9 +41,12 @@ export function PlaceInput({
   const [error, setError] = useState("");
   const token = useRef(newToken());
   const picked = useRef<string | null>(null);   // the text a pick just put in the box: it should not start another search
+  const input = useRef<HTMLInputElement>(null);
+  // Suggestions are for someone typing. Text that arrives any other way (the results page rebuilds the bar with the searched place in it) must not pop the list open.
+  const typing = () => document.activeElement === input.current;
 
   useEffect(() => {
-    if (!status?.enabled || value === picked.current || value.trim().length < 3) {
+    if (!status?.enabled || value === picked.current || value.trim().length < 3 || !typing()) {
       if (value.trim().length < 3) setGoogle([]);
       return;
     }
@@ -63,7 +66,7 @@ export function PlaceInput({
   }, [value, status?.enabled, kind]);
 
   useEffect(() => {
-    if (!withListings || value === picked.current || value.trim().length < 2) {
+    if (!withListings || value === picked.current || value.trim().length < 2 || !typing()) {
       if (value.trim().length < 2) setHints(null);
       return;
     }
@@ -119,6 +122,7 @@ export function PlaceInput({
   };
 
   const onKey = (ev: React.KeyboardEvent) => {
+    if (ev.key === "Enter" && active < 0) close();   // Enter with nothing highlighted is a search: the form submits, the list goes away
     if (!open || entries.length === 0) return;
     if (ev.key === "ArrowDown") { ev.preventDefault(); setActive((a) => (a + 1) % entries.length); }
     else if (ev.key === "ArrowUp") { ev.preventDefault(); setActive((a) => (a <= 0 ? entries.length - 1 : a - 1)); }
@@ -145,7 +149,7 @@ export function PlaceInput({
     <div className={`relative min-w-0 ${className}`}>
       {label && <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">{label}</label>}
       <input
-        id={id} value={value} placeholder={placeholder} autoComplete="off" role="combobox" aria-expanded={open && entries.length > 0} aria-controls={`${id}-list`}
+        id={id} ref={input} value={value} placeholder={placeholder} autoComplete="off" role="combobox" aria-expanded={open && entries.length > 0} aria-controls={`${id}-list`}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }} onKeyDown={onKey} onBlur={() => setTimeout(close, 150)} onFocus={() => entries.length > 0 && setOpen(true)}
         className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       />

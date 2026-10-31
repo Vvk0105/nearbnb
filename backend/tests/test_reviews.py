@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, update
 
@@ -189,7 +190,8 @@ async def test_a_property_without_reviews_has_no_rating(new_client, make_admin, 
 async def test_both_sides_are_invited_once_when_the_stay_is_over(new_client, make_admin, db, spy):
     w = await completed(new_client, make_admin, db)
     assert (await process())["invited"] == 1
-    closes = (await row(db, Booking))[0].review_closes_at.strftime("%d %b %Y")
+    booking = (await row(db, Booking))[0]
+    closes = booking.review_closes_at.astimezone(ZoneInfo(booking.timezone)).strftime("%d %b %Y")   # the email shows the date where the property is, not in UTC
     guest_text = (await emails(db, "review_invite_guest", "guest@example.com"))[0].body_text        # read at once: row() expires earlier objects
     host_text = (await emails(db, "review_invite_host", "host@example.com"))[0].body_text
     assert closes in guest_text and f"/account/trips/{w.id}" in guest_text and "blind" in guest_text

@@ -149,6 +149,34 @@ describe("suggestions under the Where box", () => {
   });
 });
 
+describe("a box that already has text in it", () => {
+  it("does not open the suggestions by itself (the results page shows the searched place in a fresh search bar)", async () => {
+    install();
+    function Prefilled() {
+      const [text, setText] = useState("Glass House Mountains QLD, Australia");
+      return (
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <PlaceInput id="w" label="Where" value={text} onChange={setText} onPickProperty={() => undefined} />
+        </QueryClientProvider>
+      );
+    }
+    render(<Prefilled />);
+    await new Promise((r) => setTimeout(r, 500));
+    expect(suggestCalls()).toEqual([]);
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("closes the list when Enter is pressed to search", async () => {
+    install();
+    const u = userEvent.setup();
+    render(<Harness onPickProperty={() => undefined} />);
+    await u.type(box(), "bea");
+    await screen.findByRole("listbox");
+    await u.keyboard("{Enter}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
 describe("the search bar on the home page", () => {
   it("opens a property straight from the suggestions", async () => {
     install();

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// @ts-ignore  the app has no Node typings (the production build type-checks tests too); vitest runs on Node, so this works
 import { readFileSync } from "node:fs";
 import indexHtml from "../../index.html?raw";
 import App from "../App";
