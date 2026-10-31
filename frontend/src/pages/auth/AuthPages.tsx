@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { User } from "../../lib/types";
@@ -41,7 +41,8 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export function LoginPage() {
-  const { setUser } = useAuth();
+  const { user, signedInNow, setUser } = useAuth();
+  const signedIn = Boolean(user) && signedInNow();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -52,6 +53,9 @@ export function LoginPage() {
   const [captchaKey, setCaptchaKey] = useState(0); // a CAPTCHA answer works once, so a fresh one is shown after every try
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Already signed in (e.g. the "Log in" link was clicked while the site was still checking): carry on instead of showing the form.
+  if (signedIn) return <Navigate to={(location.state as { from?: string } | null)?.from ?? "/"} replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -107,6 +111,8 @@ export function LoginPage() {
 }
 
 export function RegisterPage() {
+  const { user, signedInNow } = useAuth();
+  const signedIn = Boolean(user) && signedInNow();
   const navigate = useNavigate();
   const [form, setForm] = useState({ full_name: "", email: "", password: "" });
   const [accepted, setAccepted] = useState(false);
@@ -115,6 +121,8 @@ export function RegisterPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
+
+  if (signedIn) return <Navigate to="/" replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

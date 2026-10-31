@@ -475,3 +475,24 @@ async def test_catalogue_management_is_audited_and_hides_inactive_items(new_clie
     assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_PROPERTY_TYPE"
     actions = (await db.execute(select(AuditLog.action).where(AuditLog.entity_type == "property_type"))).scalars().all()
     assert actions.count("property_type.created") == 1 and "property_type.updated" in actions
+
+
+async def test_an_emptied_timezone_box_never_saves_an_empty_timezone(new_client, make_admin):
+    """A host who clears the Timezone box used to save "" and every calendar of that place then failed with an error.
+    An empty box now means "set it from the state"."""
+    admin, host, _ = await setup_world(new_client, make_admin)
+    h = csrf_headers(host)
+    meta = (await host.get(f"{API}/meta/listing")).json()
+    r = await host.post(f"{API}/host/properties", headers=h, json={
+        "name": "Roadhouse", "type_id": meta["property_types"][0]["id"], "suburb": "Ghan", "state": "NT", "postcode": "0872", "timezone": "  ",
+    })
+    assert r.status_code == 201 and r.json()["timezone"] == "Australia/Darwin"
+
+    prop = await live_listing(host, admin)
+    r = await host.patch(f"{API}/host/properties/{prop['id']}", json={"timezone": ""}, headers=h)
+    assert r.status_code == 200 and r.json()["timezone"] == "Australia/Sydney"     # unchanged, not emptied
+    r = await host.patch(f"{API}/host/properties/{prop['id']}", json={"timezone": "Mars/Base"}, headers=h)
+    assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_TIMEZONE"
+    unit = prop["units"][0]
+    r = await host.get(f"{API}/units/{unit['id']}/availability/calendar", params={"month": datetime.now(UTC).strftime("%Y-%m")})
+    assert r.status_code == 200

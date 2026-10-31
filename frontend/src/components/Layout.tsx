@@ -18,7 +18,7 @@ function hostLinkText(state: string | undefined): string {
 
 /** The public site frame (header, footer). Layout puts the routed page inside it; the host area reuses it for people who are not hosts yet. */
 export function PublicFrame({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { data: host } = useQuery({
     queryKey: ["host"], queryFn: () => api<HostInfo>("/host"), enabled: !!user && !user.is_admin, retry: false, staleTime: 60_000,
   });
@@ -33,7 +33,10 @@ export function PublicFrame({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
           <Logo />
           <nav className="flex items-center gap-1">
-            {user ? (
+            {loading ? (
+              // Still checking who this is: show nothing rather than a "Log in" link that would be wrong a moment later.
+              <span aria-hidden="true" className="h-9 w-32" />
+            ) : user ? (
               <>
               <NotificationBell />
               <UserMenu

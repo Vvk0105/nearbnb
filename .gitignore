@@ -17,3 +17,7 @@ celerybeat-schedule*
 # database backups contain personal data
 backups/
 nearbnb-app
+
+# Firebase service-account keys are secret: they belong on the server only
+*firebase-adminsdk*.json
+*service-account*.json

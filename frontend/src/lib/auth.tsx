@@ -8,6 +8,9 @@ type AuthState = {
   loading: boolean;
   setUser: (user: User | null) => void;
   logout: () => Promise<void>;
+  /** Who is signed in right now, read from the store itself. `user` reaches the screen a moment later, so right after
+   *  logging out it can still show the old person: pages that redirect on it (login, sign up) ask this instead. */
+  signedInNow: () => boolean;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -42,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (previous?.id !== user?.id) forgetOtherUsersData();
       queryClient.setQueryData(["me"], user);
     },
+    signedInNow: () => Boolean(queryClient.getQueryData<User | null>(["me"])),
     logout: async () => {
       try {
         await api("/auth/logout", { method: "POST" });

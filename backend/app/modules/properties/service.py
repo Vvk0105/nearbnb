@@ -194,8 +194,12 @@ async def _validate_property_values(session: AsyncSession, changes: dict[str, An
         changes["cancellation_template_key"] = changes["cancellation_template_key"] or None
     if "country" in changes and changes["country"]:
         changes["country"] = changes["country"].upper()
-    if "timezone" in changes and changes["timezone"]:
-        validate_timezone(changes["timezone"])
+    if "timezone" in changes:
+        if (changes["timezone"] or "").strip():
+            changes["timezone"] = validate_timezone(changes["timezone"].strip())
+        else:
+            # An emptied box means "work it out for me": the state decides (see create/edit), never an empty timezone.
+            changes.pop("timezone")
     return changes
 
 
