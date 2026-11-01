@@ -1,0 +1,140 @@
+NEARBnB – PRIVACY POLICY
+
+Website: https://nearbnb.com
+Application: NearBnB
+Effective Date: 1 November 2026
+Last Updated: 1 November 2026
+
+1. Introduction
+
+NearBnB ("we", "our", or "us") respects your privacy. This Privacy Policy explains what personal information we collect, how we use and share it, how long we keep it, and the choices you have, when you use our website and mobile app.
+
+By using NearBnB, you acknowledge this Privacy Policy.
+
+2. Information We Collect
+
+A. Account and profile information
+- Full name and email address (required to create an account).
+- A password. We store it only in scrambled (hashed) form, never in plain text.
+- Mobile phone number and date of birth, which we ask for before you can send a booking request.
+- Profile links you choose to add (for example Instagram, Facebook, LinkedIn, or X).
+- A profile photograph, if you add one on the website.
+
+B. Booking information
+- The property, dates and times, number of guests, and booking reference.
+- Your booking history, cancellations, refunds, and reviews.
+- Problem reports you send us about a booking.
+- A copy of your profile details (name, age, contact details, profile links) saved with each booking request, so the host and our team can see who requested the stay.
+
+NearBnB does not provide a chat or messaging feature between guests and hosts.
+
+C. Host and property information (for hosts)
+- Property name, address, photographs, descriptions, amenities, availability, and prices.
+- Host contact details and application details, and documents we ask for to verify a host.
+
+D. Payment information
+Card payments are made on Stripe's secure payment screen, and Stripe collects the card details. We receive payment status, amounts, transaction and refund references, and failure reasons. We do not store full card numbers, security codes, or bank passwords.
+
+E. Device and technical information
+- IP address, device and browser type, operating system, and app version, used for security, preventing abuse, keeping you signed in, and fixing problems.
+- A notification token for your phone, if you allow notifications, so we can send you updates about your bookings.
+
+F. Location
+The NearBnB app does not access your device's location. When you search, we use the place name you type. Address suggestions come from Google's Places service through our servers. Opening a property on a map takes you to Google Maps.
+
+G. Support information
+Messages and details you send when you contact us or report a problem.
+
+3. How We Use Your Information
+
+1. Create and manage your account and keep it secure.
+2. Provide search, booking requests, payments, refunds, and payouts.
+3. Share the details hosts and guests need for a booking.
+4. Verify accounts and listings.
+5. Send booking updates by email and by notification (requests, host replies, payment reminders, check-in reminders, review invitations, security messages).
+6. Provide customer support and handle reported problems.
+7. Prevent fraud, misuse, and unauthorised activity.
+8. Maintain and improve the website and app.
+9. Meet legal, tax, and accounting obligations.
+
+We do not currently send marketing messages. We will ask for your consent before we do.
+
+4. How We Share Your Information
+
+NearBnB does not sell your personal information.
+
+A. Hosts and guests
+When you send a booking request, the host can see your name, age, how long you have been a member, and your profile links. Your email address, phone number, and date of birth are shared with the host only once the booking is confirmed. A host's contact details and check-in instructions are shown to the guest once the booking is confirmed.
+
+B. Service providers
+We share the information needed to run the service with:
+- Stripe, for payments, refunds, and host payouts.
+- Google, for address suggestions (Places), and for push notifications (Firebase Cloud Messaging).
+- Cloudflare, for protection against automated abuse on our website.
+- Our hosting, storage, and email delivery providers.
+
+C. Legal and regulatory
+We may disclose information when the law requires it, or to protect rights, safety, or to prevent fraud.
+
+D. Business changes
+If NearBnB is merged, acquired, or restructured, personal information may be transferred under this Privacy Policy and applicable law.
+
+5. Storage and Security
+
+We use reasonable technical and organisational measures to protect personal information, including encrypted connections (HTTPS), hashed passwords, access controls, and restricted administrative access. No system is completely secure, so we cannot guarantee absolute security.
+
+6. Data Retention
+
+We keep personal information only as long as needed to provide the service, meet legal, tax, and accounting obligations, resolve disputes, and prevent fraud. Records of bookings, payments, refunds, and reviews are kept for the period the law requires.
+
+7. Deleting Your Account and Your Rights
+
+You can delete your account:
+1. In the app: Profile, then Delete account.
+2. On the website: Account, then Security, then Delete account.
+3. By visiting https://nearbnb.com/delete-account, or by emailing support@nearbnb.com.
+
+When your account is deleted, we erase your name, email address, phone number, date of birth, profile photo, profile links, notifications, and saved notification tokens, and you are signed out everywhere. Bookings, payments, refunds, and reviews are kept without your identifying details, because accounting and tax law require it and because hosts need their own records. Bookings in progress must be finished or cancelled first. Host accounts are closed by our support team so that payouts can be settled.
+
+Subject to applicable law, you can also ask us to:
+- Tell you what personal information we hold about you.
+- Correct inaccurate information (most details can be edited under Profile).
+- Delete your information.
+- Stop processing where processing relies on your consent.
+
+To make a request or a complaint, contact us using the details in section 13. If you are not satisfied with our response, you may contact the privacy regulator in your country.
+
+8. Cookies
+
+Our website uses essential cookies that keep you signed in and protect against fraud. We do not use advertising cookies. The mobile app does not use cookies and keeps its sign-in token in the phone's secure storage.
+
+9. Third-Party Services and Links
+
+NearBnB links to or uses third-party services (including Stripe, Google, and Cloudflare). They operate independently under their own privacy policies, and we encourage you to read them.
+
+10. Children's Privacy
+
+NearBnB is for people aged 18 and over. We do not knowingly collect personal information from children. If we learn we have, we will take steps to delete it.
+
+11. International Processing
+
+Our service providers, including Stripe and Google, may process information in other countries. Where we transfer information across borders, we take steps required by applicable law to protect it.
+
+12. Changes to This Privacy Policy
+
+We may update this Privacy Policy. We will publish the new version on our website with a new effective date, and we may ask you to accept it again.
+
+13. Contact
+
+NearBnB – Privacy Support
+
+Website: https://nearbnb.com
+Email: support@nearbnb.com
+Phone: +91 98958 42247
+Business address: 15 Kanuri Way, Pakenham, Victoria 3810, Australia
+
+14. Applicable Laws
+
+We handle personal information in line with the privacy and data protection laws that apply to our operations, including, to the extent applicable, Australia's Privacy Act 1988 and the Australian Privacy Principles, and India's Digital Personal Data Protection Act, 2023.
+
+By using NearBnB, you acknowledge that you have read this Privacy Policy.

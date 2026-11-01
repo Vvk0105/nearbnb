@@ -185,9 +185,11 @@ export function AuditPage() {
   );
 }
 
+const LEGAL_TITLES: Record<string, string> = { terms: "Terms of Service", privacy: "Privacy Policy", host_terms: "Host Terms" };
+
 export function LegalAdminPage() {
   const [docType, setDocType] = useState("terms");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(LEGAL_TITLES.terms);
   const [body, setBody] = useState("");
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -199,6 +201,7 @@ export function LegalAdminPage() {
       const r = await api<{ version: number }>(`/admin/legal/${docType}`, { method: "POST", body: { title, body } });
       setMsg({ kind: "success", text: `Published version ${r.version}. Users must accept it at their next visit.` });
       setBody("");
+      setTitle(LEGAL_TITLES[docType]);   // back to the document's usual title, not the one just published
     } catch (e) {
       setMsg({ kind: "error", text: errorMessage(e) });
     } finally {
@@ -211,7 +214,7 @@ export function LegalAdminPage() {
       <div className="space-y-4">
         <Alert kind="info">Publishing creates a new version. All users are asked to re-accept Terms and Privacy at their next login.</Alert>
         {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
-        <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={docType} onChange={(e) => setDocType(e.target.value)}>
+        <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={docType} onChange={(e) => { setDocType(e.target.value); setTitle(LEGAL_TITLES[e.target.value]); setMsg(null); }}>
           <option value="terms">Terms of Service</option>
           <option value="privacy">Privacy Policy</option>
           <option value="host_terms">Host Terms</option>

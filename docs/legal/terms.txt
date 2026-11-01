@@ -1,0 +1,176 @@
+NEARBnB – TERMS AND CONDITIONS
+
+Website: https://nearbnb.com
+Application: NearBnB
+Effective Date: 1 November 2026
+Last Updated: 1 November 2026
+
+1. Introduction
+
+Welcome to NearBnB ("Platform", "we", "us", or "our").
+
+NearBnB is an online accommodation marketplace that connects property hosts with guests who want a place to stay for a short period. Stays are booked by the hour or by the night, as set out on each listing.
+
+Through our website and mobile application, users can search for properties, view accommodation details and real availability, send booking requests, pay for accepted bookings, manage their trips, and review their stays.
+
+By accessing or using NearBnB, you agree to these Terms and Conditions. If you do not agree, you must stop using the Platform.
+
+2. Eligibility and User Accounts
+
+1. You must be at least 18 years old to create an account and make bookings.
+2. You must provide accurate, complete, and up-to-date information, and confirm your email address with the one-time code we send you.
+3. You are responsible for keeping your login details confidential.
+4. You must tell us immediately if you suspect unauthorised access to your account.
+5. You must not create accounts using false identities or impersonate another person.
+6. We may suspend or end accounts involved in fraudulent, misleading, or prohibited activity.
+
+3. Nature of the Platform
+
+1. NearBnB is an intermediary marketplace connecting hosts and guests.
+2. NearBnB does not necessarily own, operate, manage, or control the properties listed on the Platform.
+3. Hosts are independently responsible for their listings, descriptions, photographs, facilities, prices, availability, and for complying with applicable laws.
+4. We review listings before they are published, but we do not guarantee the quality, safety, legality, suitability, or accuracy of any property.
+5. The accommodation arrangement is between the host and the guest, subject to these Terms and the booking terms shown on the listing.
+
+4. Host Responsibilities
+
+Users who register as hosts agree that:
+
+1. They have the legal right or permission to list and offer the property.
+2. All property information, photographs, facilities, and descriptions are accurate.
+3. The property complies with applicable local laws, safety requirements, and licensing rules.
+4. The property is maintained in a reasonably safe and habitable condition.
+5. Availability, prices, and check-in details are kept up to date.
+6. They reply to booking requests within the time shown, and honour confirmed bookings unless a valid cancellation applies.
+7. They complete payout set-up with our payment provider (Stripe) to receive payments.
+8. They do not discriminate unlawfully or publish misleading information.
+
+We may remove or suspend listings that do not meet these requirements.
+
+5. Guest Responsibilities
+
+Guests agree to:
+
+1. Provide accurate personal and booking information, including a complete profile where we ask for it.
+2. Use properties only for lawful purposes.
+3. Respect the property, neighbours, and the house rules.
+4. Follow check-in and check-out instructions and the times shown for the property.
+5. Avoid damage, disturbances, and illegal activity.
+6. Pay all booking charges.
+7. Not exceed the permitted number of guests.
+8. Report significant problems or safety concerns promptly.
+
+Guests may be responsible for damage caused by their negligence or misconduct, subject to applicable law.
+
+6. Property Listings and Information
+
+Hosts publish listings with photographs, descriptions, prices, amenities, availability, location, and other details. We may review, change, reject, or remove listings that are incomplete, misleading, inappropriate, or in breach of these Terms.
+
+Photographs and descriptions are provided by hosts. Please check important details on the listing before you request a booking.
+
+7. How Booking Works
+
+1. Guests send a booking request for a property, choosing a check-in day and time, the number of nights, and the number of guests. Sending a request does not charge you.
+2. The host has a limited time to accept or decline. If the host does not reply in time, the request expires and you are not charged. You may withdraw a request before it is accepted.
+3. While a request is waiting and while payment is due, the requested dates are held for you.
+4. If the host accepts, you have a limited time to pay. If you do not pay in time, the booking ends and the dates are released.
+5. A booking is confirmed only when your payment succeeds. We will tell you in the app and by email.
+6. All times are local to the property. Depending on the listing, stays run in 24-hour blocks from your chosen check-in time, or use the fixed check-in and check-out times shown.
+7. We may cancel or suspend a booking in cases of suspected fraud, failed payment, safety concerns, or breach of these Terms.
+
+8. Pricing and Payments
+
+1. Prices are set by hosts. The total shown before you send a request includes the accommodation, any cleaning fee, our service fee, and applicable taxes, as itemised.
+2. Card payments are processed by Stripe. Card details are entered into Stripe's secure payment screen. NearBnB does not store full card numbers or security codes.
+3. Host payouts are made through Stripe after the guest's stay begins, less our commission, as described to hosts.
+4. Hosts are responsible for taxes and legal obligations relating to their accommodation business.
+
+9. Cancellation and Refunds
+
+1. Cancellations follow the cancellation policy shown on the listing and in your booking.
+2. When you cancel, we show you the refund you will receive before you confirm.
+3. Approved refunds are paid to the original payment method. Banks and card providers may take several days to show them.
+4. If a host cancels a confirmed booking, the guest receives a refund as described in the policy, and we may help you find alternatives.
+5. We may investigate suspected fraudulent refund claims.
+
+10. Reporting Problems
+
+Guests and hosts can report a problem with a booking through the app or website ("Report a problem"). Our team reviews reports and may contact the people involved, hold a payout while a problem is investigated, or take action under these Terms. In an emergency, contact the emergency services first.
+
+11. Prohibited Activities
+
+You must not:
+
+- Use NearBnB for illegal activities.
+- Publish false or misleading listings.
+- Upload content that infringes someone else's rights.
+- Harass, threaten, abuse, or discriminate against others.
+- Manipulate reviews, ratings, bookings, or payments.
+- Try to access the Platform without authorisation.
+- Distribute malware or harmful software.
+- Use the Platform for fraud, scams, or money laundering.
+- Avoid our security or payment processes, including taking payment outside the Platform for a booking made here.
+
+Breaches may lead to account suspension, listing removal, booking cancellation, or legal action.
+
+12. Reviews and User Content
+
+1. Guests may review a stay after check-out. Reviews are blind: yours and the host's become visible together once both are submitted, or when the review period ends.
+2. Reviews must be truthful, relevant, and respectful.
+3. Fake, misleading, abusive, defamatory, or manipulated reviews are prohibited.
+4. We may hide or remove content that breaches these Terms or the law.
+5. By submitting content, you give NearBnB a non-exclusive, worldwide, royalty-free licence to display and use it to operate and promote the Platform, subject to the Privacy Policy and applicable law.
+
+13. Intellectual Property
+
+NearBnB's trademarks, logos, branding, website and app design, software, and text are protected by law. You may not copy, distribute, modify, or commercially use them without our written permission. Hosts keep ownership of the content they upload and grant us the licence described above.
+
+14. Limitation of Liability
+
+To the extent permitted by law:
+
+1. NearBnB is not responsible for the independent actions or misconduct of hosts or guests.
+2. NearBnB is not responsible for inaccurate information supplied by hosts.
+3. We do not guarantee that the Platform will be uninterrupted or error-free.
+4. We are not liable for indirect or consequential losses from using the Platform.
+
+Nothing in these Terms excludes or limits rights or remedies that cannot lawfully be excluded, including consumer guarantees under the Australian Consumer Law where it applies, or liability for fraud or wilful misconduct.
+
+15. Indemnification
+
+You are responsible for claims, losses, and expenses arising from your unlawful conduct, breach of these Terms, infringement of others' rights, or misuse of the Platform, to the extent permitted by law.
+
+16. Account Suspension, Termination, and Deletion
+
+We may suspend, restrict, or end an account if a user breaches these Terms, acts fraudulently, gives false information, misuses the Platform, or creates a safety or security risk.
+
+You can delete your account at any time in the app (Profile, then Delete account), on the website (Account, then Security, then Delete account), or by following https://nearbnb.com/delete-account. Bookings in progress must be finished or cancelled first. Host accounts are closed by our support team so that payouts can be settled. What happens to your data is explained in the Privacy Policy.
+
+Ending an account does not remove payment obligations or liabilities that arose before it ended.
+
+17. Privacy
+
+We handle personal information as set out in our Privacy Policy at https://nearbnb.com/legal/privacy.
+
+18. Third-Party Services
+
+The Platform uses third-party services, including Stripe for payments, Google services for address suggestions, maps links, and push notifications, and others for hosting and email. They have their own terms and privacy policies, and we are not responsible for them beyond our obligations under law.
+
+19. Changes to These Terms
+
+We may update these Terms. The updated Terms will be published on the Platform with a new effective date, and we may ask you to accept them again before you continue. If you keep using NearBnB after changes take effect, you accept them, where the law allows.
+
+20. Governing Law and Disputes
+
+These Terms are governed by the laws of Victoria, Australia. We try to resolve disputes through good-faith discussion and our support team first. Otherwise, disputes are subject to the courts of Victoria, Australia, without limiting any mandatory consumer rights you have where you live.
+
+21. Contact
+
+NearBnB – Support and Legal
+
+Website: https://nearbnb.com
+Email: support@nearbnb.com
+Phone: +91 98958 42247
+Business address: 15 Kanuri Way, Pakenham, Victoria 3810, Australia
+
+By using NearBnB, you confirm that you have read and agree to these Terms and Conditions.

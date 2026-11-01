@@ -1,8 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import type { User } from "../../lib/types";
+import type { HostInfo, User } from "../../lib/types";
 import { Alert, Button, Field, errorMessage } from "../../components/ui";
 import { Icon } from "../../components/icons";
 import { Turnstile } from "../../components/Turnstile";
@@ -40,6 +40,29 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+/** Where someone lands after logging in: an admin in the admin area, a working host in the host area, everyone else on the home page. */
+export async function landingFor(user: User): Promise<string> {
+  if (user.is_admin) return "/admin";
+  try {
+    const host = await api<HostInfo>("/host");
+    if (["approved", "active", "restricted"].includes(host.state)) return "/host";
+  } catch {
+    // not a host, or the check failed: the home page is a safe place for anyone
+  }
+  return "/";
+}
+
+/** Someone who is already signed in and opens the login page: send them where they would have landed. */
+function AlreadySignedIn({ user, from }: { user: User; from?: string }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    let alive = true;
+    void (from ? Promise.resolve(from) : landingFor(user)).then((to) => alive && navigate(to, { replace: true }));
+    return () => { alive = false; };
+  }, [user, from, navigate]);
+  return null;
+}
+
 export function LoginPage() {
   const { user, signedInNow, setUser } = useAuth();
   const signedIn = Boolean(user) && signedInNow();
@@ -55,7 +78,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   // Already signed in (e.g. the "Log in" link was clicked while the site was still checking): carry on instead of showing the form.
-  if (signedIn) return <Navigate to={(location.state as { from?: string } | null)?.from ?? "/"} replace />;
+  if (signedIn && user) return <AlreadySignedIn user={user} from={(location.state as { from?: string } | null)?.from} />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,7 +90,7 @@ export function LoginPage() {
         body: { email, password, totp_code: needTotp ? totp : undefined, turnstile_token: captcha },
       });
       setUser(user);
-      navigate((location.state as { from?: string } | null)?.from ?? "/account", { replace: true });
+      // Nothing to do here: setUser makes this page see a signed-in person, and <AlreadySignedIn> sends them where they belong.
     } catch (err) {
       if (err instanceof ApiError && err.code === "TOTP_REQUIRED") {
         setNeedTotp(true);
